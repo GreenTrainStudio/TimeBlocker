@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedDays = new Set([1, 2, 3, 4, 5]);
     let editingIndex = -1; // -1 means not editing
     let allRules = [];
+    let storageChangeDebounce = null;
 
     function getRuleKey(rule) {
         const days = [...rule.days].sort((a, b) => a - b).join(',');
@@ -97,10 +98,11 @@ document.addEventListener('DOMContentLoaded', () => {
             allRules.forEach((rule, index) => {
                 const daysStr = rule.days.map(d => dayNames[d-1]).join(', ');
                 const attemptsCount = blockAttempts[getRuleKey(rule)] || 0;
+                const attemptsLabel = attemptsCount > 0 ? attemptsCount : '—';
                 html += `
                     <div class="list-item">
                         <div class="list-item-content" data-index="${index}">
-                            <span>${rule.site}</span><span class="attempts-count">попыток: ${attemptsCount}</span><br>
+                            <span>${rule.site}</span><span class="attempts-count">попыток: ${attemptsLabel}</span><br>
                             <small>${rule.start} - ${rule.end} | ${daysStr}</small>
                         </div>
                         <div class="list-item-actions">
@@ -267,6 +269,12 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelEditBtn.addEventListener('click', exitEditMode);
 
     clearAllBtn.addEventListener('click', clearAllRules);
+
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName !== 'local' || (!changes.rules && !changes.blockAttempts)) return;
+        clearTimeout(storageChangeDebounce);
+        storageChangeDebounce = setTimeout(loadRules, 80);
+    });
     
     // Initialize
     loadRules();

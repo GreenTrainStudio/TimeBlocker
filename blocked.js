@@ -2,7 +2,8 @@ const urlParams = new URLSearchParams(window.location.search);
 const site = urlParams.get('site') || 'неизвестный сайт';
 const start = urlParams.get('start') || '??:??';
 const end = urlParams.get('end') || '??:??';
-const attempts = parseInt(urlParams.get('attempts') || '0', 10);
+const attemptsRaw = parseInt(urlParams.get('attempts') || '1', 10);
+const attempts = Number.isFinite(attemptsRaw) && attemptsRaw > 0 ? attemptsRaw : 1;
 
 document.getElementById('siteDisplay').textContent = site;
 document.getElementById('timeDisplay').textContent = `Разрешён с ${start} до ${end} в выбранные дни`;
