@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Time Blocker",
+  "version": "1.0",
+  "description": "Блокирует выбранные сайты в указанный промежуток времени и дни недели",
+  "permissions": [
+    "storage",
+    "webNavigation",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Настройки блокировки"
+  }
+}
