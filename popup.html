@@ -270,12 +270,55 @@
             margin-bottom: 10px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             font-size: 13px;
             font-weight: 600;
         }
-        .toggle-row input {
-            margin: 0;
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex: 0 0 auto;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            cursor: pointer;
+            background-color: #cfd8dc;
+            transition: 0.2s;
+            border-radius: 999px;
+        }
+        .toggle-slider::before {
+            content: "";
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            left: 3px;
+            top: 3px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+            transition: 0.2s;
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #0078d4;
+        }
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(20px);
+        }
+        .toggle-switch input:focus-visible + .toggle-slider {
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.28);
+        }
+        .toggle-switch input:disabled + .toggle-slider {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
         .hold-delete-panel {
             margin-top: 12px;
@@ -424,7 +467,10 @@
         <label data-i18n="days.label">📅 Days:</label>
         <div class="days-container" id="daysContainer"></div>
         <div class="toggle-row">
-            <input type="checkbox" id="hardDeleteToggle" />
+            <label class="toggle-switch" for="hardDeleteToggle">
+                <input type="checkbox" id="hardDeleteToggle" />
+                <span class="toggle-slider"></span>
+            </label>
             <label for="hardDeleteToggle" id="hardDeleteLabel" style="margin:0; font-weight:600;">Сложное удаление</label>
         </div>
         
