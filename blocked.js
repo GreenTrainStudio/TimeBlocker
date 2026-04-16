@@ -2,9 +2,11 @@ const urlParams = new URLSearchParams(window.location.search);
 const site = urlParams.get('site') || 'неизвестный сайт';
 const start = urlParams.get('start') || '??:??';
 const end = urlParams.get('end') || '??:??';
+const attempts = parseInt(urlParams.get('attempts') || '0', 10);
 
 document.getElementById('siteDisplay').textContent = site;
 document.getElementById('timeDisplay').textContent = `Разрешён с ${start} до ${end} в выбранные дни`;
+document.getElementById('attemptsDisplay').textContent = `Вы пытались зайти сюда уже ${attempts} раз`;
 
 document.getElementById('closeBtn').addEventListener('click', () => {
     window.close();
