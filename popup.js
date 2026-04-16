@@ -3,6 +3,7 @@ const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 document.addEventListener('DOMContentLoaded', () => {
     const daysContainer = document.getElementById('daysContainer');
     const siteInput = document.getElementById('siteInput');
+    const insertCurrentDomainBtn = document.getElementById('insertCurrentDomainBtn');
     const startTime = document.getElementById('startTime');
     const endTime = document.getElementById('endTime');
     const addBtn = document.getElementById('addBtn');
@@ -195,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function setEditLockState(locked) {
         isEditLocked = locked;
         siteInput.readOnly = locked;
+        insertCurrentDomainBtn.disabled = locked;
         startTime.disabled = locked;
         endTime.disabled = locked;
         hardDeleteToggle.disabled = locked;
@@ -202,6 +204,30 @@ document.addEventListener('DOMContentLoaded', () => {
         ruleEditorSection.classList.toggle('editor-locked', locked);
         renderDayButtons();
     }
+
+    function normalizeDomainFromUrl(rawUrl) {
+        try {
+            const parsed = new URL(rawUrl);
+            if (!parsed.hostname) return '';
+            return parsed.hostname.replace(/^www\./i, '');
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function insertCurrentTabDomain() {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            const activeTab = tabs && tabs[0];
+            if (!activeTab || !activeTab.url) return;
+            const domain = normalizeDomainFromUrl(activeTab.url);
+            if (!domain) return;
+            siteInput.value = domain;
+            siteInput.focus();
+            siteInput.setSelectionRange(domain.length, domain.length);
+        });
+    }
+
+    insertCurrentDomainBtn.addEventListener('click', insertCurrentTabDomain);
 
     // Switch to edit mode
     function enterEditMode(index, options = {}) {
