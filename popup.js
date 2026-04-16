@@ -23,6 +23,22 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${rule.site}|${rule.start}|${rule.end}|${days}`;
     }
 
+    function getDayKey(now = new Date()) {
+        return now.toISOString().slice(0, 10); // YYYY-MM-DD
+    }
+
+    function getDailyCount(rawValue) {
+        if (typeof rawValue === 'number') {
+            return rawValue;
+        }
+
+        if (!rawValue || rawValue.dayKey !== getDayKey()) {
+            return 0;
+        }
+
+        return Number(rawValue.dayCount) || 0;
+    }
+
     // Render day buttons
     function renderDayButtons() {
         daysContainer.innerHTML = '';
@@ -97,12 +113,11 @@ document.addEventListener('DOMContentLoaded', () => {
             let html = '';
             allRules.forEach((rule, index) => {
                 const daysStr = rule.days.map(d => dayNames[d-1]).join(', ');
-                const attemptsCount = blockAttempts[getRuleKey(rule)] || 0;
-                const attemptsLabel = attemptsCount > 0 ? attemptsCount : '—';
+                const attemptsCount = getDailyCount(blockAttempts[getRuleKey(rule)]);
                 html += `
                     <div class="list-item">
                         <div class="list-item-content" data-index="${index}">
-                            <span>${rule.site}</span><span class="attempts-count">попыток: ${attemptsLabel}</span><br>
+                            <span>${rule.site}</span><span class="attempts-count">за день: ${attemptsCount}</span><br>
                             <small>${rule.start} - ${rule.end} | ${daysStr}</small>
                         </div>
                         <div class="list-item-actions">
