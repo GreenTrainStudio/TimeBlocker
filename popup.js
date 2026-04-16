@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateBtn = document.getElementById('updateBtn');
     const cancelEditBtn = document.getElementById('cancelEditBtn');
     const rulesListDiv = document.getElementById('rulesList');
-    const clearAllBtn = document.getElementById('clearAllBtn');
     const editModeIndicator = document.getElementById('editModeIndicator');
     const editingSite = document.getElementById('editingSite');
     const hardDeleteToggle = document.getElementById('hardDeleteToggle');
@@ -297,16 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function clearAllRules() {
-        if (confirm('Delete all rules?')) {
-            chrome.storage.local.set({ rules: [], blockAttempts: {} }, () => {
-                exitEditMode();
-                resetHoldDeleteState(true);
-                loadRules();
-            });
-        }
-    }
-
     // Validate and get rule from form
     function getRuleFromForm() {
         let site = siteInput.value.trim().toLowerCase();
@@ -404,8 +393,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cancel editing
     cancelEditBtn.addEventListener('click', exitEditMode);
-
-    clearAllBtn.addEventListener('click', clearAllRules);
 
     holdDeleteBtn.addEventListener('mousedown', beginHoldDelete);
     holdDeleteBtn.addEventListener('mouseup', cancelHoldDelete);
