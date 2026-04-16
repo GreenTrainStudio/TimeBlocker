@@ -56,12 +56,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let syncTimersStart = null;
     let saveSettingsResetTimer = null;
 
+    function adjustPopupSize() {
+        requestAnimationFrame(() => {
+            document.body.style.height = 'auto';
+            const targetHeight = document.body.scrollHeight;
+            document.body.style.height = `${targetHeight}px`;
+        });
+    }
+
     function switchTab(tabName) {
         const showBlockTab = tabName !== 'insights';
         blockTab.classList.toggle('active', showBlockTab);
         insightsTab.classList.toggle('active', !showBlockTab);
         blockTabBtn.classList.toggle('active', showBlockTab);
         insightsTabBtn.classList.toggle('active', !showBlockTab);
+        adjustPopupSize();
     }
 
     function getHoldDeleteMs() {
@@ -446,6 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedRuleIndex = null;
                 resetHoldDeleteState(true);
                 rulesListDiv.innerHTML = `<div style="color:#888; text-align:center; padding:10px;">${t('rules.empty')}</div>`;
+                adjustPopupSize();
                 return;
             }
             if (selectedRuleIndex !== null && (selectedRuleIndex < 0 || selectedRuleIndex >= allRules.length)) {
@@ -517,6 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     enterEditMode(index);
                 });
             });
+            adjustPopupSize();
         });
     }
 
@@ -717,6 +728,9 @@ document.addEventListener('DOMContentLoaded', () => {
         switchTab('block');
         editModeText.textContent = t('edit.indicator', { site: '' }).trim();
         renderDayButtons();
-        loadSettings(loadRules);
+        loadSettings(() => {
+            loadRules();
+            adjustPopupSize();
+        });
     });
 });
