@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function refreshHoldLabels() {
-        hardDeleteLabel.textContent = t('hardDelete.label', { seconds: activeHoldDeleteSeconds });
+        hardDeleteLabel.textContent = t('hardDelete.label');
         holdDeleteText.textContent = getHoldBaseText(pendingHoldAction?.type);
         syncTimersText.textContent = getSyncTimersBaseText();
         syncTimersBtn.style.setProperty('--progress', '0%');
