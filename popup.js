@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateBtn = document.getElementById('updateBtn');
     const cancelEditBtn = document.getElementById('cancelEditBtn');
     const rulesListDiv = document.getElementById('rulesList');
+    const ruleEditorSection = document.getElementById('ruleEditorSection');
     const editModeIndicator = document.getElementById('editModeIndicator');
     const editingSite = document.getElementById('editingSite');
     const hardDeleteToggle = document.getElementById('hardDeleteToggle');
@@ -21,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let editingIndex = -1; // -1 means not editing
     let allRules = [];
     let selectedRuleIndex = null;
+    let isEditLocked = false;
     let storageChangeDebounce = null;
     let holdDeleteTimer = null;
     let holdDeleteRaf = null;
@@ -55,9 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
         dayNames.forEach((name, index) => {
             const dayNum = index + 1;
             const btn = document.createElement('div');
-            btn.className = `day-btn ${selectedDays.has(dayNum) ? 'selected' : ''}`;
+            btn.className = `day-btn ${selectedDays.has(dayNum) ? 'selected' : ''} ${isEditLocked ? 'disabled' : ''}`;
             btn.textContent = name;
             btn.addEventListener('click', () => {
+                if (isEditLocked) return;
                 if (selectedDays.has(dayNum)) {
                     selectedDays.delete(dayNum);
                 } else {
@@ -70,8 +73,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     renderDayButtons();
 
+    function setEditLockState(locked) {
+        isEditLocked = locked;
+        siteInput.readOnly = locked;
+        startTime.disabled = locked;
+        endTime.disabled = locked;
+        hardDeleteToggle.disabled = locked;
+        updateBtn.disabled = locked;
+        ruleEditorSection.classList.toggle('editor-locked', locked);
+        renderDayButtons();
+    }
+
     // Switch to edit mode
-    function enterEditMode(index) {
+    function enterEditMode(index, options = {}) {
+        const { locked = false } = options;
         const rule = allRules[index];
         resetHoldDeleteState(true);
         editingIndex = index;
@@ -82,15 +97,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         selectedDays.clear();
         rule.days.forEach(d => selectedDays.add(d));
-        renderDayButtons();
         hardDeleteToggle.checked = Boolean(rule.hardDeleteEnabled);
+        setEditLockState(locked);
         
         // Update UI
         addBtn.style.display = 'none';
         updateBtn.style.display = 'block';
         cancelEditBtn.style.display = 'block';
         editModeIndicator.classList.add('active');
-        editingSite.textContent = rule.site;
+        editingSite.textContent = locked ? `${rule.site} (locked)` : rule.site;
     }
 
     // Exit edit mode
@@ -100,10 +115,10 @@ document.addEventListener('DOMContentLoaded', () => {
         startTime.value = '09:00';
         endTime.value = '18:00';
         hardDeleteToggle.checked = false;
+        setEditLockState(false);
         
         selectedDays.clear();
         [1, 2, 3, 4, 5].forEach(d => selectedDays.add(d));
-        renderDayButtons();
         
         // Update UI
         addBtn.style.display = 'block';
@@ -170,6 +185,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function confirmEdit(index) {
         resetHoldDeleteState(true);
+        if (editingIndex === index) {
+            setEditLockState(false);
+            const rule = allRules[index];
+            editingSite.textContent = rule.site;
+            return;
+        }
         enterEditMode(index);
     }
 
@@ -278,6 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     setSelectedRule(index);
                     const targetRule = allRules[index];
                     if (targetRule?.hardDeleteEnabled) {
+                        enterEditMode(index, { locked: true });
                         requestHoldAction('edit', index);
                         return;
                     }
@@ -292,6 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     setSelectedRule(index);
                     const targetRule = allRules[index];
                     if (targetRule?.hardDeleteEnabled) {
+                        enterEditMode(index, { locked: true });
                         requestHoldAction('edit', index);
                         return;
                     }
