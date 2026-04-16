@@ -495,7 +495,7 @@
         <button id="settingsBtn" class="settings-trigger" data-i18n-title="settings.title" title="Настройки">⚙️</button>
     </h2>
     
-    <div id="blockTab" class="tab-content active">
+    <div id="createTab" class="tab-content active">
         <div class="edit-mode-indicator" id="editModeIndicator">
             <span id="editModeText">Editing rule for:</span> <strong id="editingSite"></strong>
         </div>
@@ -531,6 +531,9 @@
             </div>
         </div>
 
+    </div>
+
+    <div id="rulesTab" class="tab-content">
         <div class="section">
             <button id="newRuleBtn" class="secondary" style="width:100%; margin-bottom:10px;" data-i18n="btn.newRule">➕ New rule</button>
             <label data-i18n="rules.active">📋 Active Rules:</label>
@@ -552,7 +555,8 @@
     </div>
 
     <div class="tab-nav">
-        <button id="blockTabBtn" class="tab-nav-btn active" data-tab="block" data-i18n="tabs.block">Блокировать</button>
+        <button id="createTabBtn" class="tab-nav-btn active" data-tab="create" data-i18n="tabs.create">Создать</button>
+        <button id="rulesTabBtn" class="tab-nav-btn" data-tab="rules" data-i18n="tabs.rules">Правила</button>
         <button id="insightsTabBtn" class="tab-nav-btn" data-tab="insights" data-i18n="tabs.insights">Инсайты</button>
     </div>
 

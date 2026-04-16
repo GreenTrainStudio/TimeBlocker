@@ -31,9 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const syncTimersText = document.getElementById('syncTimersText');
     const holdDeletePanelTitle = document.getElementById('holdDeletePanelTitle');
     const editModeText = document.getElementById('editModeText');
-    const blockTab = document.getElementById('blockTab');
+    const createTab = document.getElementById('createTab');
+    const rulesTab = document.getElementById('rulesTab');
     const insightsTab = document.getElementById('insightsTab');
-    const blockTabBtn = document.getElementById('blockTabBtn');
+    const createTabBtn = document.getElementById('createTabBtn');
+    const rulesTabBtn = document.getElementById('rulesTabBtn');
     const insightsTabBtn = document.getElementById('insightsTabBtn');
 
     let selectedDays = new Set([1, 2, 3, 4, 5]);
@@ -65,11 +67,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function switchTab(tabName) {
-        const showBlockTab = tabName !== 'insights';
-        blockTab.classList.toggle('active', showBlockTab);
-        insightsTab.classList.toggle('active', !showBlockTab);
-        blockTabBtn.classList.toggle('active', showBlockTab);
-        insightsTabBtn.classList.toggle('active', !showBlockTab);
+        const isCreateTab = tabName === 'create';
+        const isRulesTab = tabName === 'rules';
+        const isInsightsTab = tabName === 'insights';
+        createTab.classList.toggle('active', isCreateTab);
+        rulesTab.classList.toggle('active', isRulesTab);
+        insightsTab.classList.toggle('active', isInsightsTab);
+        createTabBtn.classList.toggle('active', isCreateTab);
+        rulesTabBtn.classList.toggle('active', isRulesTab);
+        insightsTabBtn.classList.toggle('active', isInsightsTab);
         adjustPopupSize();
     }
 
@@ -290,6 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function enterEditMode(index, options = {}) {
         const { locked = false } = options;
         const rule = allRules[index];
+        switchTab('create');
         resetHoldDeleteState(true);
         editingIndex = index;
         
@@ -649,6 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resetHoldDeleteState(true);
         setSelectedRule(null);
         exitEditMode();
+        switchTab('create');
     });
 
     holdDeleteBtn.addEventListener('mousedown', beginHoldDelete);
@@ -662,7 +670,8 @@ document.addEventListener('DOMContentLoaded', () => {
     holdDeleteBtn.addEventListener('touchcancel', cancelHoldDelete);
 
     settingsBtn.addEventListener('click', openSettings);
-    blockTabBtn.addEventListener('click', () => switchTab('block'));
+    createTabBtn.addEventListener('click', () => switchTab('create'));
+    rulesTabBtn.addEventListener('click', () => switchTab('rules'));
     insightsTabBtn.addEventListener('click', () => switchTab('insights'));
     settingsCloseIcon.addEventListener('click', closeSettings);
     settingsModal.addEventListener('click', (e) => {
@@ -725,7 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize
     i18n.init(() => {
         updateDayNames();
-        switchTab('block');
+        switchTab('create');
         editModeText.textContent = t('edit.indicator', { site: '' }).trim();
         renderDayButtons();
         loadSettings(() => {
