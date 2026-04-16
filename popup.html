@@ -148,6 +148,58 @@
         .edit-mode-indicator.active {
             display: block;
         }
+        .toggle-row {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .toggle-row input {
+            margin: 0;
+        }
+        .hold-delete-panel {
+            margin-top: 12px;
+            background: #fff5f5;
+            border: 1px solid #ffcdd2;
+            border-radius: 8px;
+            padding: 12px;
+            display: none;
+        }
+        .hold-delete-panel.active {
+            display: block;
+        }
+        .hold-delete-panel h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #b71c1c;
+        }
+        .hold-delete-note {
+            margin: 0 0 10px 0;
+            font-size: 12px;
+            color: #6d4c41;
+        }
+        .hold-delete-btn {
+            position: relative;
+            width: 100%;
+            min-height: 64px;
+            font-size: 16px;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+        .hold-delete-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(255,255,255,0.24) var(--progress, 0%), transparent 0);
+            transition: background 0.08s linear;
+            pointer-events: none;
+        }
+        .hold-delete-btn .hold-delete-text {
+            position: relative;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
@@ -172,6 +224,10 @@
         
         <label>📅 Days:</label>
         <div class="days-container" id="daysContainer"></div>
+        <div class="toggle-row">
+            <input type="checkbox" id="hardDeleteToggle" />
+            <label for="hardDeleteToggle" style="margin:0; font-weight:600;">Сложное удаление (удерживать 20с)</label>
+        </div>
         
         <div class="button-group">
             <button id="addBtn">➕ Add</button>
@@ -183,6 +239,13 @@
     <div class="section">
         <label>📋 Active Rules:</label>
         <div id="rulesList"></div>
+        <div id="holdDeletePanel" class="hold-delete-panel">
+            <h3>Подтверждение удаления</h3>
+            <p class="hold-delete-note" id="holdDeleteNote"></p>
+            <button id="holdDeleteBtn" class="danger hold-delete-btn" style="--progress:0%;">
+                <span class="hold-delete-text" id="holdDeleteText">Удерживайте 20с для удаления</span>
+            </button>
+        </div>
         <button id="clearAllBtn" class="danger" style="margin-top:10px;">🗑️ Clear All</button>
     </div>
 
