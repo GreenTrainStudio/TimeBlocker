@@ -31,6 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const syncTimersText = document.getElementById('syncTimersText');
     const holdDeletePanelTitle = document.getElementById('holdDeletePanelTitle');
     const editModeText = document.getElementById('editModeText');
+    const blockTab = document.getElementById('blockTab');
+    const insightsTab = document.getElementById('insightsTab');
+    const blockTabBtn = document.getElementById('blockTabBtn');
+    const insightsTabBtn = document.getElementById('insightsTabBtn');
 
     let selectedDays = new Set([1, 2, 3, 4, 5]);
     let editingIndex = -1; // -1 means not editing
@@ -51,6 +55,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let syncTimersRaf = null;
     let syncTimersStart = null;
     let saveSettingsResetTimer = null;
+
+    function switchTab(tabName) {
+        const showBlockTab = tabName !== 'insights';
+        blockTab.classList.toggle('active', showBlockTab);
+        insightsTab.classList.toggle('active', !showBlockTab);
+        blockTabBtn.classList.toggle('active', showBlockTab);
+        insightsTabBtn.classList.toggle('active', !showBlockTab);
+    }
 
     function getHoldDeleteMs() {
         return (pendingHoldAction?.seconds || activeHoldDeleteSeconds) * 1000;
@@ -639,6 +651,8 @@ document.addEventListener('DOMContentLoaded', () => {
     holdDeleteBtn.addEventListener('touchcancel', cancelHoldDelete);
 
     settingsBtn.addEventListener('click', openSettings);
+    blockTabBtn.addEventListener('click', () => switchTab('block'));
+    insightsTabBtn.addEventListener('click', () => switchTab('insights'));
     settingsCloseIcon.addEventListener('click', closeSettings);
     settingsModal.addEventListener('click', (e) => {
         if (e.target === settingsModal) {
@@ -700,6 +714,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize
     i18n.init(() => {
         updateDayNames();
+        switchTab('block');
         editModeText.textContent = t('edit.indicator', { site: '' }).trim();
         renderDayButtons();
         loadSettings(loadRules);

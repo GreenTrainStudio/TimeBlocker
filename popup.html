@@ -6,6 +6,7 @@
         body {
             width: 380px;
             padding: 15px;
+            padding-bottom: 78px;
             font-family: 'Segoe UI', Tahoma, sans-serif;
         }
         h2 {
@@ -444,6 +445,46 @@
             position: relative;
             z-index: 1;
         }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .tab-nav {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #ffffff;
+            border-top: 1px solid #dcdcdc;
+            display: flex;
+            gap: 8px;
+            padding: 10px 15px 12px;
+            box-sizing: border-box;
+        }
+        .tab-nav-btn {
+            background: #eef2f7;
+            color: #4d5a6a;
+            border: 1px solid #d4dbe4;
+            padding: 9px 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: none;
+        }
+        .tab-nav-btn.active {
+            background: #0078d4;
+            color: #fff;
+            border-color: #0078d4;
+        }
+        .insights-placeholder {
+            text-align: center;
+            color: #6b7280;
+            font-size: 13px;
+            padding: 20px 10px;
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body>
@@ -454,52 +495,65 @@
         <button id="settingsBtn" class="settings-trigger" data-i18n-title="settings.title" title="Настройки">⚙️</button>
     </h2>
     
-    <div class="edit-mode-indicator" id="editModeIndicator">
-        <span id="editModeText">Editing rule for:</span> <strong id="editingSite"></strong>
+    <div id="blockTab" class="tab-content active">
+        <div class="edit-mode-indicator" id="editModeIndicator">
+            <span id="editModeText">Editing rule for:</span> <strong id="editingSite"></strong>
+        </div>
+
+        <div class="section" id="ruleEditorSection">
+            <label data-i18n="domain.label">🌐 Domain (e.g. youtube.com):</label>
+            <div class="domain-input-wrap">
+                <input type="text" id="siteInput" data-i18n-placeholder="domain.placeholder" placeholder="youtube.com" />
+                <button type="button" id="insertCurrentDomainBtn" class="domain-from-tab-btn" data-i18n-title="domain.insertCurrent" data-i18n-aria-label="domain.insertCurrent" title="Вставить домен текущей вкладки" aria-label="Вставить домен текущей вкладки">↗</button>
+            </div>
+            <div class="note" data-i18n="domain.note">Without www and https://</div>
+
+            <label data-i18n="time.from">⏳ From:</label>
+            <input type="time" id="startTime" value="09:00" />
+
+            <label data-i18n="time.to">⌛ To:</label>
+            <input type="time" id="endTime" value="18:00" />
+
+            <label data-i18n="days.label">📅 Days:</label>
+            <div class="days-container" id="daysContainer"></div>
+            <div class="toggle-row">
+                <label class="toggle-switch" for="hardDeleteToggle">
+                    <input type="checkbox" id="hardDeleteToggle" checked />
+                    <span class="toggle-slider"></span>
+                </label>
+                <label for="hardDeleteToggle" id="hardDeleteLabel" style="margin:0; font-weight:600;">Сложное удаление</label>
+            </div>
+
+            <div class="button-group">
+                <button id="addBtn" data-i18n="btn.add">➕ Add</button>
+                <button id="updateBtn" class="secondary" style="display: none;" data-i18n="btn.update">✏️ Update</button>
+                <button id="cancelEditBtn" class="secondary" style="display: none;" data-i18n="btn.cancel">❌ Cancel</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <button id="newRuleBtn" class="secondary" style="width:100%; margin-bottom:10px;" data-i18n="btn.newRule">➕ New rule</button>
+            <label data-i18n="rules.active">📋 Active Rules:</label>
+            <div id="rulesList"></div>
+            <div id="holdDeletePanel" class="hold-delete-panel">
+                <h3 id="holdDeletePanelTitle">Подтверждение удаления</h3>
+                <p class="hold-delete-note" id="holdDeleteNote"></p>
+                <button id="holdDeleteBtn" class="danger hold-delete-btn" style="--progress:0%;">
+                    <span class="hold-delete-text" id="holdDeleteText">Удерживайте 20с для удаления</span>
+                </button>
+            </div>
+        </div>
     </div>
 
-    <div class="section" id="ruleEditorSection">
-        <label data-i18n="domain.label">🌐 Domain (e.g. youtube.com):</label>
-        <div class="domain-input-wrap">
-            <input type="text" id="siteInput" data-i18n-placeholder="domain.placeholder" placeholder="youtube.com" />
-            <button type="button" id="insertCurrentDomainBtn" class="domain-from-tab-btn" data-i18n-title="domain.insertCurrent" data-i18n-aria-label="domain.insertCurrent" title="Вставить домен текущей вкладки" aria-label="Вставить домен текущей вкладки">↗</button>
-        </div>
-        <div class="note" data-i18n="domain.note">Without www and https://</div>
-        
-        <label data-i18n="time.from">⏳ From:</label>
-        <input type="time" id="startTime" value="09:00" />
-        
-        <label data-i18n="time.to">⌛ To:</label>
-        <input type="time" id="endTime" value="18:00" />
-        
-        <label data-i18n="days.label">📅 Days:</label>
-        <div class="days-container" id="daysContainer"></div>
-        <div class="toggle-row">
-            <label class="toggle-switch" for="hardDeleteToggle">
-                <input type="checkbox" id="hardDeleteToggle" checked />
-                <span class="toggle-slider"></span>
-            </label>
-            <label for="hardDeleteToggle" id="hardDeleteLabel" style="margin:0; font-weight:600;">Сложное удаление</label>
-        </div>
-        
-        <div class="button-group">
-            <button id="addBtn" data-i18n="btn.add">➕ Add</button>
-            <button id="updateBtn" class="secondary" style="display: none;" data-i18n="btn.update">✏️ Update</button>
-            <button id="cancelEditBtn" class="secondary" style="display: none;" data-i18n="btn.cancel">❌ Cancel</button>
+    <div id="insightsTab" class="tab-content">
+        <div class="section">
+            <div class="insights-placeholder" data-i18n="insights.empty">Скоро здесь появятся инсайты.</div>
         </div>
     </div>
 
-    <div class="section">
-        <button id="newRuleBtn" class="secondary" style="width:100%; margin-bottom:10px;" data-i18n="btn.newRule">➕ New rule</button>
-        <label data-i18n="rules.active">📋 Active Rules:</label>
-        <div id="rulesList"></div>
-        <div id="holdDeletePanel" class="hold-delete-panel">
-            <h3 id="holdDeletePanelTitle">Подтверждение удаления</h3>
-            <p class="hold-delete-note" id="holdDeleteNote"></p>
-            <button id="holdDeleteBtn" class="danger hold-delete-btn" style="--progress:0%;">
-                <span class="hold-delete-text" id="holdDeleteText">Удерживайте 20с для удаления</span>
-            </button>
-        </div>
+    <div class="tab-nav">
+        <button id="blockTabBtn" class="tab-nav-btn active" data-tab="block" data-i18n="tabs.block">Блокировать</button>
+        <button id="insightsTabBtn" class="tab-nav-btn" data-tab="insights" data-i18n="tabs.insights">Инсайты</button>
     </div>
 
     <div id="settingsModal" class="settings-modal">
