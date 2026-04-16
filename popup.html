@@ -398,30 +398,30 @@
 <body>
     <h2>
         <span class="title-wrap">
-            <span>⏰ Time Blocker</span>
+            <span data-i18n="app.title">⏰ Time Blocker</span>
         </span>
-        <button id="settingsBtn" class="settings-trigger" title="Настройки">⚙️</button>
+        <button id="settingsBtn" class="settings-trigger" data-i18n-title="settings.title" title="Настройки">⚙️</button>
     </h2>
     
     <div class="edit-mode-indicator" id="editModeIndicator">
-        Editing rule for: <strong id="editingSite"></strong>
+        <span id="editModeText">Editing rule for:</span> <strong id="editingSite"></strong>
     </div>
 
     <div class="section" id="ruleEditorSection">
-        <label>🌐 Domain (e.g. youtube.com):</label>
+        <label data-i18n="domain.label">🌐 Domain (e.g. youtube.com):</label>
         <div class="domain-input-wrap">
-            <input type="text" id="siteInput" placeholder="youtube.com" />
-            <button type="button" id="insertCurrentDomainBtn" class="domain-from-tab-btn" title="Вставить домен текущей вкладки" aria-label="Вставить домен текущей вкладки">↗</button>
+            <input type="text" id="siteInput" data-i18n-placeholder="domain.placeholder" placeholder="youtube.com" />
+            <button type="button" id="insertCurrentDomainBtn" class="domain-from-tab-btn" data-i18n-title="domain.insertCurrent" data-i18n-aria-label="domain.insertCurrent" title="Вставить домен текущей вкладки" aria-label="Вставить домен текущей вкладки">↗</button>
         </div>
-        <div class="note">Without www and https://</div>
+        <div class="note" data-i18n="domain.note">Without www and https://</div>
         
-        <label>⏳ From:</label>
+        <label data-i18n="time.from">⏳ From:</label>
         <input type="time" id="startTime" value="09:00" />
         
-        <label>⌛ To:</label>
+        <label data-i18n="time.to">⌛ To:</label>
         <input type="time" id="endTime" value="18:00" />
         
-        <label>📅 Days:</label>
+        <label data-i18n="days.label">📅 Days:</label>
         <div class="days-container" id="daysContainer"></div>
         <div class="toggle-row">
             <input type="checkbox" id="hardDeleteToggle" />
@@ -429,18 +429,18 @@
         </div>
         
         <div class="button-group">
-            <button id="addBtn">➕ Add</button>
-            <button id="updateBtn" class="secondary" style="display: none;">✏️ Update</button>
-            <button id="cancelEditBtn" class="secondary" style="display: none;">❌ Cancel</button>
+            <button id="addBtn" data-i18n="btn.add">➕ Add</button>
+            <button id="updateBtn" class="secondary" style="display: none;" data-i18n="btn.update">✏️ Update</button>
+            <button id="cancelEditBtn" class="secondary" style="display: none;" data-i18n="btn.cancel">❌ Cancel</button>
         </div>
     </div>
 
     <div class="section">
-        <button id="newRuleBtn" class="secondary" style="width:100%; margin-bottom:10px;">➕ New rule</button>
-        <label>📋 Active Rules:</label>
+        <button id="newRuleBtn" class="secondary" style="width:100%; margin-bottom:10px;" data-i18n="btn.newRule">➕ New rule</button>
+        <label data-i18n="rules.active">📋 Active Rules:</label>
         <div id="rulesList"></div>
         <div id="holdDeletePanel" class="hold-delete-panel">
-            <h3>Подтверждение удаления</h3>
+            <h3 id="holdDeletePanelTitle">Подтверждение удаления</h3>
             <p class="hold-delete-note" id="holdDeleteNote"></p>
             <button id="holdDeleteBtn" class="danger hold-delete-btn" style="--progress:0%;">
                 <span class="hold-delete-text" id="holdDeleteText">Удерживайте 20с для удаления</span>
@@ -450,13 +450,13 @@
 
     <div id="settingsModal" class="settings-modal">
         <div class="settings-modal-card">
-            <button id="settingsCloseIcon" class="settings-close-icon" title="Закрыть" aria-label="Закрыть">×</button>
-            <h3 class="settings-modal-title">Настройки защиты</h3>
-            <label for="holdDurationInput">Сколько секунд удерживать для сложного удаления/редактирования:</label>
+            <button id="settingsCloseIcon" class="settings-close-icon" data-i18n-title="settings.close" data-i18n-aria-label="settings.close" title="Закрыть" aria-label="Закрыть">×</button>
+            <h3 class="settings-modal-title" data-i18n="settings.protectionTitle">Настройки защиты</h3>
+            <label for="holdDurationInput" data-i18n="settings.holdLabel">Сколько секунд удерживать для сложного удаления/редактирования:</label>
             <input type="number" id="holdDurationInput" min="1" max="300" step="1" />
-            <p class="settings-warning">Текущие таймеры не будут обновлены автоматически после сохранения.</p>
+            <p class="settings-warning" data-i18n="settings.warning">Текущие таймеры не будут обновлены автоматически после сохранения.</p>
             <div class="button-group">
-                <button id="saveSettingsBtn">💾 Сохранить</button>
+                <button id="saveSettingsBtn" data-i18n="btn.save">💾 Сохранить</button>
                 <button id="syncTimersBtn" class="secondary hold-sync-btn" style="--progress:0%;">
                     <span id="syncTimersText" class="hold-sync-text">Удерживайте для обновления текущих таймеров</span>
                 </button>
@@ -464,6 +464,8 @@
         </div>
     </div>
 
+    <script src="locales.js"></script>
+    <script src="i18n.js"></script>
     <script src="popup.js"></script>
 </body>
 </html>

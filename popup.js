@@ -1,6 +1,7 @@
-const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
 document.addEventListener('DOMContentLoaded', () => {
+    const i18n = window.TimeBlockerI18n;
+    const t = (key, params = {}) => i18n.t(key, params);
+    let dayNames = [];
     const daysContainer = document.getElementById('daysContainer');
     const siteInput = document.getElementById('siteInput');
     const insertCurrentDomainBtn = document.getElementById('insertCurrentDomainBtn');
@@ -27,6 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const hardDeleteLabel = document.getElementById('hardDeleteLabel');
     const syncTimersBtn = document.getElementById('syncTimersBtn');
     const syncTimersText = document.getElementById('syncTimersText');
+    const holdDeletePanelTitle = document.getElementById('holdDeletePanelTitle');
+    const editModeText = document.getElementById('editModeText');
 
     let selectedDays = new Set([1, 2, 3, 4, 5]);
     let editingIndex = -1; // -1 means not editing
@@ -52,20 +55,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getHoldBaseText(actionType, seconds = pendingHoldAction?.seconds || activeHoldDeleteSeconds) {
         if (actionType === 'delete') {
-            return `Удерживайте ${seconds}с для удаления`;
+            return t('hold.base.delete', { seconds });
         }
         if (actionType === 'edit') {
-            return `Удерживайте ${seconds}с для редактирования`;
+            return t('hold.base.edit', { seconds });
         }
-        return `Удерживайте ${seconds}с`;
+        return t('hold.base.generic', { seconds });
     }
 
     function getSyncTimersBaseText() {
-        return `Удерживайте ${activeHoldDeleteSeconds}с для обновления текущих таймеров`;
+        return t('sync.base', { seconds: activeHoldDeleteSeconds });
     }
 
     function refreshHoldLabels() {
-        hardDeleteLabel.textContent = `Сложное удаление (удерживать ${activeHoldDeleteSeconds}с)`;
+        hardDeleteLabel.textContent = t('hardDelete.label', { seconds: activeHoldDeleteSeconds });
         holdDeleteText.textContent = getHoldBaseText(pendingHoldAction?.type);
         syncTimersText.textContent = getSyncTimersBaseText();
         syncTimersBtn.style.setProperty('--progress', '0%');
@@ -116,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const elapsed = Date.now() - syncTimersStart;
         const progress = Math.min(100, (elapsed / holdMs) * 100);
         syncTimersBtn.style.setProperty('--progress', `${progress}%`);
-        syncTimersText.textContent = `Удерживайте... ${Math.max(0, Math.ceil((holdMs - elapsed) / 1000))}с`;
+        syncTimersText.textContent = t('hold.progress', { seconds: Math.max(0, Math.ceil((holdMs - elapsed) / 1000)) });
         if (elapsed < holdMs) {
             syncTimersRaf = requestAnimationFrame(updateSyncTimersProgress);
         }
@@ -191,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
             daysContainer.appendChild(btn);
         });
     }
-    renderDayButtons();
 
     function setEditLockState(locked) {
         isEditLocked = locked;
@@ -270,7 +272,8 @@ document.addEventListener('DOMContentLoaded', () => {
         updateBtn.style.display = 'block';
         cancelEditBtn.style.display = 'block';
         editModeIndicator.classList.add('active');
-        editingSite.textContent = locked ? `${rule.site} (locked)` : rule.site;
+        editModeText.textContent = t('edit.indicator', { site: '' }).trim();
+        editingSite.textContent = rule.site;
     }
 
     // Exit edit mode
@@ -317,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const holdDeleteMs = getHoldDeleteMs();
         const progress = Math.min(100, (elapsed / holdDeleteMs) * 100);
         holdDeleteBtn.style.setProperty('--progress', `${progress}%`);
-        holdDeleteText.textContent = `Удерживайте... ${Math.max(0, Math.ceil((holdDeleteMs - elapsed) / 1000))}с`;
+        holdDeleteText.textContent = t('hold.progress', { seconds: Math.max(0, Math.ceil((holdDeleteMs - elapsed) / 1000)) });
 
         if (elapsed < holdDeleteMs) {
             holdDeleteRaf = requestAnimationFrame(updateHoldDeleteProgress);
@@ -364,12 +367,12 @@ document.addEventListener('DOMContentLoaded', () => {
         holdDeletePanel.classList.add('active');
 
         if (type === 'delete') {
-            holdDeletePanel.querySelector('h3').textContent = 'Подтверждение удаления';
-            holdDeleteNote.textContent = `Правило для ${rule.site}. Удерживайте кнопку ${ruleHoldSeconds} секунд без отпускания, чтобы удалить правило.`;
+            holdDeletePanelTitle.textContent = t('panel.deleteConfirm');
+            holdDeleteNote.textContent = t('hold.note.delete', { site: rule.site, seconds: ruleHoldSeconds });
             holdDeleteText.textContent = getHoldBaseText('delete', ruleHoldSeconds);
         } else {
-            holdDeletePanel.querySelector('h3').textContent = 'Разблокировка редактирования';
-            holdDeleteNote.textContent = `Правило для ${rule.site} защищено сложным удалением. Удерживайте кнопку ${ruleHoldSeconds} секунд, чтобы открыть редактирование.`;
+            holdDeletePanelTitle.textContent = t('panel.unlockEdit');
+            holdDeleteNote.textContent = t('hold.note.edit', { site: rule.site, seconds: ruleHoldSeconds });
             holdDeleteText.textContent = getHoldBaseText('edit', ruleHoldSeconds);
         }
 
@@ -414,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (allRules.length === 0) {
                 selectedRuleIndex = null;
                 resetHoldDeleteState(true);
-                rulesListDiv.innerHTML = '<div style="color:#888; text-align:center; padding:10px;">No rules</div>';
+                rulesListDiv.innerHTML = `<div style="color:#888; text-align:center; padding:10px;">${t('rules.empty')}</div>`;
                 return;
             }
             if (selectedRuleIndex !== null && (selectedRuleIndex < 0 || selectedRuleIndex >= allRules.length)) {
@@ -433,12 +436,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <img class="rule-site-icon" src="${getFaviconUrl(rule.site)}" alt="">
                                 <span>${rule.site}</span>
                             </span>
-                            <span class="attempts-count">за день: ${attemptsCount}</span><br>
+                            <span class="attempts-count">${t('attempts.day', { count: attemptsCount })}</span><br>
                             <small>${rule.start} - ${rule.end} | ${daysStr}</small>
                         </div>
                         <div class="list-item-actions">
-                            <button class="edit-btn" data-index="${index}" title="Edit">✏️</button>
-                            <button class="delete-btn" data-index="${index}" title="Delete">❌</button>
+                            <button class="edit-btn" data-index="${index}" title="${t('btn.editTitle')}">✏️</button>
+                            <button class="delete-btn" data-index="${index}" title="${t('btn.deleteTitle')}">❌</button>
                         </div>
                     </div>
                 `;
@@ -497,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         resetHoldDeleteState(true);
-        if (confirm('Delete this rule?')) {
+        if (confirm(t('confirm.deleteRule'))) {
             confirmDelete(index);
         }
     }
@@ -509,19 +512,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const end = endTime.value;
         
         if (!site) {
-            alert('Enter domain');
+            alert(t('alert.enterDomain'));
             return null;
         }
         
         site = site.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
         
         if (!start || !end) {
-            alert('Select start and end time');
+            alert(t('alert.selectTime'));
             return null;
         }
         
         if (selectedDays.size === 0) {
-            alert('Select at least one day');
+            alert(t('alert.selectDay'));
             return null;
         }
 
@@ -549,7 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         
         if (duplicate) {
-            alert('This rule already exists');
+            alert(t('alert.ruleExists'));
             return;
         }
         
@@ -575,7 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         
         if (duplicate) {
-            alert('Another rule with these parameters already exists');
+            alert(t('alert.ruleDuplicate'));
             return;
         }
         
@@ -626,7 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
     saveSettingsBtn.addEventListener('click', () => {
         const parsed = Number(holdDurationInput.value);
         if (!Number.isFinite(parsed) || parsed < 1 || parsed > 300) {
-            alert('Введите число от 1 до 300');
+            alert(t('alert.holdSecondsRange'));
             return;
         }
         holdDeleteSeconds = Math.round(parsed);
@@ -636,10 +639,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearTimeout(saveSettingsResetTimer);
                 saveSettingsResetTimer = null;
             }
-            saveSettingsBtn.textContent = '✅ Сохранено';
+            saveSettingsBtn.textContent = t('btn.saved');
             saveSettingsBtn.disabled = true;
             saveSettingsResetTimer = setTimeout(() => {
-                saveSettingsBtn.textContent = '💾 Сохранить';
+                saveSettingsBtn.textContent = t('btn.save');
                 saveSettingsBtn.disabled = false;
                 saveSettingsResetTimer = null;
             }, 1200);
@@ -658,6 +661,23 @@ document.addEventListener('DOMContentLoaded', () => {
         storageChangeDebounce = setTimeout(loadRules, 80);
     });
     
+    function updateDayNames() {
+        dayNames = [
+            t('days.mon'),
+            t('days.tue'),
+            t('days.wed'),
+            t('days.thu'),
+            t('days.fri'),
+            t('days.sat'),
+            t('days.sun')
+        ];
+    }
+
     // Initialize
-    loadSettings(loadRules);
+    i18n.init(() => {
+        updateDayNames();
+        editModeText.textContent = t('edit.indicator', { site: '' }).trim();
+        renderDayButtons();
+        loadSettings(loadRules);
+    });
 });
