@@ -1,11 +1,20 @@
+const i18n = window.TimeBlockerI18n;
+const t = (key, params = {}) => i18n.t(key, params);
+
 const urlParams = new URLSearchParams(window.location.search);
-const site = urlParams.get('site') || 'неизвестный сайт';
 const start = urlParams.get('start') || '??:??';
 const end = urlParams.get('end') || '??:??';
 const ruleKey = urlParams.get('ruleKey') || '';
 
-document.getElementById('siteDisplay').textContent = site;
-document.getElementById('timeDisplay').textContent = `Разрешён с ${start} до ${end} в выбранные дни`;
+function getSiteName() {
+    return urlParams.get('site') || t('blocked.siteUnknown');
+}
+
+function renderHeaderTexts() {
+    const site = getSiteName();
+    document.getElementById('siteDisplay').textContent = site;
+    document.getElementById('timeDisplay').textContent = t('blocked.timeInfo', { start, end });
+}
 
 function getDayKey(now = new Date()) {
     return now.toISOString().slice(0, 10); // YYYY-MM-DD
@@ -39,8 +48,8 @@ function normalizeCounter(rawValue) {
 }
 
 function renderCounters(dayCount, weekCount) {
-    document.getElementById('dailyAttemptsDisplay').textContent = `Вы пытались зайти сюда сегодня: ${dayCount} раз`;
-    document.getElementById('weeklyAttemptsDisplay').textContent = `Вы пытались зайти сюда за неделю: ${weekCount} раз`;
+    document.getElementById('dailyAttemptsDisplay').textContent = t('blocked.dailyAttempts', { count: dayCount });
+    document.getElementById('weeklyAttemptsDisplay').textContent = t('blocked.weeklyAttempts', { count: weekCount });
 }
 
 function updateAttemptsCounter() {
@@ -80,23 +89,26 @@ document.getElementById('closeBtn').addEventListener('click', () => {
     window.close();
 });
 
-updateAttemptsCounter();
-
-// Небольшой обратный отсчет до конца блокировки (по времени)
 function updateCountdown() {
     const now = new Date();
     const [endHour, endMin] = end.split(':').map(Number);
     const endTime = new Date();
     endTime.setHours(endHour, endMin, 0, 0);
-    
+
     const diff = endTime - now;
     if (diff > 0) {
         const mins = Math.floor(diff / 60000);
         const secs = Math.floor((diff % 60000) / 1000);
-        document.getElementById('countdown').textContent = `До окончания блокировки: ${mins} мин ${secs} сек`;
+        document.getElementById('countdown').textContent = t('blocked.countdown', { mins, secs });
     } else {
-        document.getElementById('countdown').textContent = 'Блокировка должна закончиться. Попробуйте обновить страницу.';
+        document.getElementById('countdown').textContent = t('blocked.finished');
     }
 }
+
 setInterval(updateCountdown, 1000);
-updateCountdown();
+
+i18n.init(() => {
+    renderHeaderTexts();
+    updateAttemptsCounter();
+    updateCountdown();
+});
