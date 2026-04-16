@@ -1,3 +1,8 @@
+function getRuleKey(rule) {
+    const days = [...rule.days].sort((a, b) => a - b).join(',');
+    return `${rule.site}|${rule.start}|${rule.end}|${days}`;
+}
+
 // Функция проверки, нужно ли блокировать сайт сейчас
 function shouldBlock(rule) {
     const now = new Date();
@@ -53,10 +58,11 @@ function checkAndBlock(tabId, url) {
         });
 
         if (matchingRule && shouldBlock(matchingRule)) {
+            const ruleKey = getRuleKey(matchingRule);
             // Блокируем: перенаправляем на локальную страницу-заглушку
             const blockPageUrl = chrome.runtime.getURL('blocked.html');
             // Добавляем параметры для информации
-            const infoUrl = `${blockPageUrl}?site=${encodeURIComponent(hostname)}&start=${matchingRule.start}&end=${matchingRule.end}`;
+            const infoUrl = `${blockPageUrl}?site=${encodeURIComponent(hostname)}&start=${matchingRule.start}&end=${matchingRule.end}&ruleKey=${encodeURIComponent(ruleKey)}`;
             chrome.tabs.update(tabId, { url: infoUrl });
         }
     });

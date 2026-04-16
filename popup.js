@@ -16,6 +16,28 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedDays = new Set([1, 2, 3, 4, 5]);
     let editingIndex = -1; // -1 means not editing
     let allRules = [];
+    let storageChangeDebounce = null;
+
+    function getRuleKey(rule) {
+        const days = [...rule.days].sort((a, b) => a - b).join(',');
+        return `${rule.site}|${rule.start}|${rule.end}|${days}`;
+    }
+
+    function getDayKey(now = new Date()) {
+        return now.toISOString().slice(0, 10); // YYYY-MM-DD
+    }
+
+    function getDailyCount(rawValue) {
+        if (typeof rawValue === 'number') {
+            return rawValue;
+        }
+
+        if (!rawValue || rawValue.dayKey !== getDayKey()) {
+            return 0;
+        }
+
+        return Number(rawValue.dayCount) || 0;
+    }
 
     // Render day buttons
     function renderDayButtons() {
@@ -79,8 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load and display rules
     function loadRules() {
-        chrome.storage.local.get({ rules: [] }, (data) => {
+        chrome.storage.local.get({ rules: [], blockAttempts: {} }, (data) => {
             allRules = data.rules;
+            const blockAttempts = data.blockAttempts || {};
             
             if (allRules.length === 0) {
                 rulesListDiv.innerHTML = '<div style="color:#888; text-align:center; padding:10px;">No rules</div>';
@@ -90,10 +113,11 @@ document.addEventListener('DOMContentLoaded', () => {
             let html = '';
             allRules.forEach((rule, index) => {
                 const daysStr = rule.days.map(d => dayNames[d-1]).join(', ');
+                const attemptsCount = getDailyCount(blockAttempts[getRuleKey(rule)]);
                 html += `
                     <div class="list-item">
                         <div class="list-item-content" data-index="${index}">
-                            <span>${rule.site}</span><br>
+                            <span>${rule.site}</span><span class="attempts-count">за день: ${attemptsCount}</span><br>
                             <small>${rule.start} - ${rule.end} | ${daysStr}</small>
                         </div>
                         <div class="list-item-actions">
@@ -135,21 +159,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function deleteRule(index) {
         if (confirm('Delete this rule?')) {
+            const removedRule = allRules[index];
             allRules.splice(index, 1);
-            chrome.storage.local.set({ rules: allRules }, () => {
-                if (editingIndex === index) {
-                    exitEditMode();
-                } else if (editingIndex > index) {
-                    editingIndex--;
-                }
-                loadRules();
+            chrome.storage.local.get({ blockAttempts: {} }, (data) => {
+                const blockAttempts = data.blockAttempts || {};
+                delete blockAttempts[getRuleKey(removedRule)];
+
+                chrome.storage.local.set({ rules: allRules, blockAttempts }, () => {
+                    if (editingIndex === index) {
+                        exitEditMode();
+                    } else if (editingIndex > index) {
+                        editingIndex--;
+                    }
+                    loadRules();
+                });
             });
         }
     }
 
     function clearAllRules() {
         if (confirm('Delete all rules?')) {
-            chrome.storage.local.set({ rules: [] }, () => {
+            chrome.storage.local.set({ rules: [], blockAttempts: {} }, () => {
                 exitEditMode();
                 loadRules();
             });
@@ -231,10 +261,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        const previousRule = allRules[editingIndex];
+        const previousKey = getRuleKey(previousRule);
+        const updatedKey = getRuleKey(updatedRule);
+
         allRules[editingIndex] = updatedRule;
-        chrome.storage.local.set({ rules: allRules }, () => {
-            exitEditMode();
-            loadRules();
+        chrome.storage.local.get({ blockAttempts: {} }, (data) => {
+            const blockAttempts = data.blockAttempts || {};
+            if (previousKey !== updatedKey) {
+                blockAttempts[updatedKey] = blockAttempts[previousKey] || 0;
+                delete blockAttempts[previousKey];
+            }
+
+            chrome.storage.local.set({ rules: allRules, blockAttempts }, () => {
+                exitEditMode();
+                loadRules();
+            });
         });
     });
 
@@ -242,6 +284,12 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelEditBtn.addEventListener('click', exitEditMode);
 
     clearAllBtn.addEventListener('click', clearAllRules);
+
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName !== 'local' || (!changes.rules && !changes.blockAttempts)) return;
+        clearTimeout(storageChangeDebounce);
+        storageChangeDebounce = setTimeout(loadRules, 80);
+    });
     
     // Initialize
     loadRules();
