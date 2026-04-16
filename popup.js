@@ -215,6 +215,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function getFaviconUrl(domain) {
+        if (!domain) return '';
+        return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+    }
+
     function attachTimePickerOnInputClick(input) {
         if (!input) return;
         input.addEventListener('click', () => {
@@ -424,7 +429,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 html += `
                     <div class="${ruleClassName}">
                         <div class="list-item-content" data-index="${index}">
-                            <span>${rule.site}</span><span class="attempts-count">за день: ${attemptsCount}</span><br>
+                            <span class="rule-site-row">
+                                <img class="rule-site-icon" src="${getFaviconUrl(rule.site)}" alt="">
+                                <span>${rule.site}</span>
+                            </span>
+                            <span class="attempts-count">за день: ${attemptsCount}</span><br>
                             <small>${rule.start} - ${rule.end} | ${daysStr}</small>
                         </div>
                         <div class="list-item-actions">
