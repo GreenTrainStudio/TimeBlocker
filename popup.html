@@ -254,12 +254,35 @@
             display: flex;
         }
         .settings-modal-card {
+            position: relative;
             width: 100%;
             max-width: 320px;
             background: #fff;
             border-radius: 10px;
             padding: 16px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+        .settings-close-icon {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 50%;
+            background: transparent;
+            color: #666;
+            font-size: 20px;
+            line-height: 1;
+            padding: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .settings-close-icon:hover {
+            background: #f0f0f0;
+            color: #222;
         }
         .settings-modal-title {
             margin: 0 0 12px 0;
@@ -275,17 +298,10 @@
             font-size: 12px;
             padding: 8px;
         }
-        .settings-hold-update {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid #eee;
-        }
         .hold-sync-btn {
             position: relative;
-            width: 100%;
-            min-height: 52px;
+            min-height: 40px;
             overflow: hidden;
-            border-radius: 8px;
         }
         .hold-sync-btn::before {
             content: '';
@@ -352,15 +368,13 @@
 
     <div id="settingsModal" class="settings-modal">
         <div class="settings-modal-card">
+            <button id="settingsCloseIcon" class="settings-close-icon" title="Закрыть" aria-label="Закрыть">×</button>
             <h3 class="settings-modal-title">Настройки защиты</h3>
             <label for="holdDurationInput">Сколько секунд удерживать для сложного удаления/редактирования:</label>
             <input type="number" id="holdDurationInput" min="1" max="300" step="1" />
             <p class="settings-warning">Текущие таймеры не будут обновлены автоматически после сохранения.</p>
             <div class="button-group">
                 <button id="saveSettingsBtn">💾 Сохранить</button>
-                <button id="closeSettingsBtn" class="secondary">Закрыть</button>
-            </div>
-            <div class="settings-hold-update">
                 <button id="syncTimersBtn" class="secondary hold-sync-btn" style="--progress:0%;">
                     <span id="syncTimersText" class="hold-sync-text">Удерживайте для обновления текущих таймеров</span>
                 </button>

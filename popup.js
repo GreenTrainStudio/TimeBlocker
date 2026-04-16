@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsModal = document.getElementById('settingsModal');
     const holdDurationInput = document.getElementById('holdDurationInput');
     const saveSettingsBtn = document.getElementById('saveSettingsBtn');
-    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    const settingsCloseIcon = document.getElementById('settingsCloseIcon');
     const hardDeleteLabel = document.getElementById('hardDeleteLabel');
     const syncTimersBtn = document.getElementById('syncTimersBtn');
     const syncTimersText = document.getElementById('syncTimersText');
@@ -550,7 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
     holdDeleteBtn.addEventListener('touchcancel', cancelHoldDelete);
 
     settingsBtn.addEventListener('click', openSettings);
-    closeSettingsBtn.addEventListener('click', closeSettings);
+    settingsCloseIcon.addEventListener('click', closeSettings);
     settingsModal.addEventListener('click', (e) => {
         if (e.target === settingsModal) {
             closeSettings();
