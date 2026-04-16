@@ -23,6 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveSettingsBtn = document.getElementById('saveSettingsBtn');
     const closeSettingsBtn = document.getElementById('closeSettingsBtn');
     const hardDeleteLabel = document.getElementById('hardDeleteLabel');
+    const syncTimersBtn = document.getElementById('syncTimersBtn');
+    const syncTimersText = document.getElementById('syncTimersText');
 
     let selectedDays = new Set([1, 2, 3, 4, 5]);
     let editingIndex = -1; // -1 means not editing
@@ -36,24 +38,34 @@ document.addEventListener('DOMContentLoaded', () => {
     let pendingHoldAction = null; // { type: 'delete' | 'edit', index: number }
     const DEFAULT_HOLD_DELETE_SECONDS = 20;
     let holdDeleteSeconds = DEFAULT_HOLD_DELETE_SECONDS;
+    let activeHoldDeleteSeconds = DEFAULT_HOLD_DELETE_SECONDS;
+    let syncTimersTimer = null;
+    let syncTimersRaf = null;
+    let syncTimersStart = null;
 
     function getHoldDeleteMs() {
-        return holdDeleteSeconds * 1000;
+        return activeHoldDeleteSeconds * 1000;
     }
 
     function getHoldBaseText(actionType) {
         if (actionType === 'delete') {
-            return `Удерживайте ${holdDeleteSeconds}с для удаления`;
+            return `Удерживайте ${activeHoldDeleteSeconds}с для удаления`;
         }
         if (actionType === 'edit') {
-            return `Удерживайте ${holdDeleteSeconds}с для редактирования`;
+            return `Удерживайте ${activeHoldDeleteSeconds}с для редактирования`;
         }
-        return `Удерживайте ${holdDeleteSeconds}с`;
+        return `Удерживайте ${activeHoldDeleteSeconds}с`;
+    }
+
+    function getSyncTimersBaseText() {
+        return `Удерживайте ${activeHoldDeleteSeconds}с для обновления текущих таймеров`;
     }
 
     function refreshHoldLabels() {
-        hardDeleteLabel.textContent = `Сложное удаление (удерживать ${holdDeleteSeconds}с)`;
+        hardDeleteLabel.textContent = `Сложное удаление (удерживать ${activeHoldDeleteSeconds}с)`;
         holdDeleteText.textContent = getHoldBaseText(pendingHoldAction?.type);
+        syncTimersText.textContent = getSyncTimersBaseText();
+        syncTimersBtn.style.setProperty('--progress', '0%');
     }
 
     function openSettings() {
@@ -63,15 +75,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function closeSettings() {
         settingsModal.classList.remove('active');
+        cancelSyncTimersHold();
     }
 
     function loadSettings(callback) {
-        chrome.storage.local.get({ holdDeleteSeconds: DEFAULT_HOLD_DELETE_SECONDS }, (data) => {
+        chrome.storage.local.get({
+            holdDeleteSeconds: DEFAULT_HOLD_DELETE_SECONDS,
+            activeHoldDeleteSeconds: DEFAULT_HOLD_DELETE_SECONDS
+        }, (data) => {
             const rawSeconds = Number(data.holdDeleteSeconds);
             holdDeleteSeconds = Number.isFinite(rawSeconds) ? Math.max(1, Math.min(300, Math.round(rawSeconds))) : DEFAULT_HOLD_DELETE_SECONDS;
+            const rawActiveSeconds = Number(data.activeHoldDeleteSeconds);
+            activeHoldDeleteSeconds = Number.isFinite(rawActiveSeconds)
+                ? Math.max(1, Math.min(300, Math.round(rawActiveSeconds)))
+                : holdDeleteSeconds;
             refreshHoldLabels();
             if (typeof callback === 'function') callback();
         });
+    }
+
+    function stopSyncTimersHold() {
+        if (syncTimersTimer) {
+            clearTimeout(syncTimersTimer);
+            syncTimersTimer = null;
+        }
+        if (syncTimersRaf) {
+            cancelAnimationFrame(syncTimersRaf);
+            syncTimersRaf = null;
+        }
+        syncTimersStart = null;
+        syncTimersBtn.style.setProperty('--progress', '0%');
+    }
+
+    function updateSyncTimersProgress() {
+        if (!syncTimersStart) return;
+        const holdMs = activeHoldDeleteSeconds * 1000;
+        const elapsed = Date.now() - syncTimersStart;
+        const progress = Math.min(100, (elapsed / holdMs) * 100);
+        syncTimersBtn.style.setProperty('--progress', `${progress}%`);
+        syncTimersText.textContent = `Удерживайте... ${Math.max(0, Math.ceil((holdMs - elapsed) / 1000))}с`;
+        if (elapsed < holdMs) {
+            syncTimersRaf = requestAnimationFrame(updateSyncTimersProgress);
+        }
+    }
+
+    function beginSyncTimersHold(e) {
+        if (e) e.preventDefault();
+        stopSyncTimersHold();
+        syncTimersStart = Date.now();
+        const holdMs = activeHoldDeleteSeconds * 1000;
+        syncTimersRaf = requestAnimationFrame(updateSyncTimersProgress);
+        syncTimersTimer = setTimeout(() => {
+            activeHoldDeleteSeconds = holdDeleteSeconds;
+            chrome.storage.local.set({ activeHoldDeleteSeconds }, () => {
+                stopSyncTimersHold();
+                refreshHoldLabels();
+                if (pendingHoldAction) {
+                    requestHoldAction(pendingHoldAction.type, pendingHoldAction.index);
+                }
+            });
+        }, holdMs);
+    }
+
+    function cancelSyncTimersHold() {
+        stopSyncTimersHold();
+        syncTimersText.textContent = getSyncTimersBaseText();
     }
 
     function getRuleKey(rule) {
@@ -240,11 +308,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (type === 'delete') {
             holdDeletePanel.querySelector('h3').textContent = 'Подтверждение удаления';
-            holdDeleteNote.textContent = `Правило для ${rule.site}. Удерживайте кнопку ${holdDeleteSeconds} секунд без отпускания, чтобы удалить правило.`;
+            holdDeleteNote.textContent = `Правило для ${rule.site}. Удерживайте кнопку ${activeHoldDeleteSeconds} секунд без отпускания, чтобы удалить правило.`;
             holdDeleteText.textContent = getHoldBaseText('delete');
         } else {
             holdDeletePanel.querySelector('h3').textContent = 'Разблокировка редактирования';
-            holdDeleteNote.textContent = `Правило для ${rule.site} защищено сложным удалением. Удерживайте кнопку ${holdDeleteSeconds} секунд, чтобы открыть редактирование.`;
+            holdDeleteNote.textContent = `Правило для ${rule.site} защищено сложным удалением. Удерживайте кнопку ${activeHoldDeleteSeconds} секунд, чтобы открыть редактирование.`;
             holdDeleteText.textContent = getHoldBaseText('edit');
         }
 
@@ -497,12 +565,15 @@ document.addEventListener('DOMContentLoaded', () => {
         holdDeleteSeconds = Math.round(parsed);
         chrome.storage.local.set({ holdDeleteSeconds }, () => {
             refreshHoldLabels();
-            if (pendingHoldAction) {
-                requestHoldAction(pendingHoldAction.type, pendingHoldAction.index);
-            }
-            closeSettings();
+            alert(`Сохранено. Текущие таймеры останутся ${activeHoldDeleteSeconds}с, пока не удержите кнопку обновления.`);
         });
     });
+    syncTimersBtn.addEventListener('mousedown', beginSyncTimersHold);
+    syncTimersBtn.addEventListener('mouseup', cancelSyncTimersHold);
+    syncTimersBtn.addEventListener('mouseleave', cancelSyncTimersHold);
+    syncTimersBtn.addEventListener('touchstart', beginSyncTimersHold, { passive: false });
+    syncTimersBtn.addEventListener('touchend', cancelSyncTimersHold);
+    syncTimersBtn.addEventListener('touchcancel', cancelSyncTimersHold);
 
     chrome.storage.onChanged.addListener((changes, areaName) => {
         if (areaName !== 'local' || (!changes.rules && !changes.blockAttempts)) return;
