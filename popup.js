@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const addBtn = document.getElementById('addBtn');
     const updateBtn = document.getElementById('updateBtn');
     const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const newRuleBtn = document.getElementById('newRuleBtn');
     const rulesListDiv = document.getElementById('rulesList');
     const ruleEditorSection = document.getElementById('ruleEditorSection');
     const editModeIndicator = document.getElementById('editModeIndicator');
@@ -549,6 +550,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cancel editing
     cancelEditBtn.addEventListener('click', exitEditMode);
+    newRuleBtn.addEventListener('click', () => {
+        resetHoldDeleteState(true);
+        setSelectedRule(null);
+        exitEditMode();
+    });
 
     holdDeleteBtn.addEventListener('mousedown', beginHoldDelete);
     holdDeleteBtn.addEventListener('mouseup', cancelHoldDelete);
