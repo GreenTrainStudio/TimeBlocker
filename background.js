@@ -1,20 +1,6 @@
-const lastBlockEventByTab = new Map();
-
 function getRuleKey(rule) {
     const days = [...rule.days].sort((a, b) => a - b).join(',');
     return `${rule.site}|${rule.start}|${rule.end}|${days}`;
-}
-
-function shouldCountAttempt(tabId, hostname, ruleKey) {
-    const now = Date.now();
-    const previous = lastBlockEventByTab.get(tabId);
-
-    if (previous && previous.hostname === hostname && previous.ruleKey === ruleKey && now - previous.timestamp < 5000) {
-        return false;
-    }
-
-    lastBlockEventByTab.set(tabId, { hostname, ruleKey, timestamp: now });
-    return true;
 }
 
 // Функция проверки, нужно ли блокировать сайт сейчас
@@ -73,21 +59,11 @@ function checkAndBlock(tabId, url) {
 
         if (matchingRule && shouldBlock(matchingRule)) {
             const ruleKey = getRuleKey(matchingRule);
-            const increment = shouldCountAttempt(tabId, hostname, ruleKey) ? 1 : 0;
-
-            chrome.storage.local.get({ blockAttempts: {} }, (attemptData) => {
-                const blockAttempts = attemptData.blockAttempts || {};
-                const nextAttemptsCount = (blockAttempts[ruleKey] || 0) + increment;
-                blockAttempts[ruleKey] = nextAttemptsCount;
-
-                chrome.storage.local.set({ blockAttempts }, () => {
-                    // Блокируем: перенаправляем на локальную страницу-заглушку
-                    const blockPageUrl = chrome.runtime.getURL('blocked.html');
-                    // Добавляем параметры для информации
-                    const infoUrl = `${blockPageUrl}?site=${encodeURIComponent(hostname)}&start=${matchingRule.start}&end=${matchingRule.end}&attempts=${nextAttemptsCount}`;
-                    chrome.tabs.update(tabId, { url: infoUrl });
-                });
-            });
+            // Блокируем: перенаправляем на локальную страницу-заглушку
+            const blockPageUrl = chrome.runtime.getURL('blocked.html');
+            // Добавляем параметры для информации
+            const infoUrl = `${blockPageUrl}?site=${encodeURIComponent(hostname)}&start=${matchingRule.start}&end=${matchingRule.end}&ruleKey=${encodeURIComponent(ruleKey)}`;
+            chrome.tabs.update(tabId, { url: infoUrl });
         }
     });
 }
