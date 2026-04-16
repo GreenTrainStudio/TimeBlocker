@@ -215,6 +215,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function attachTimePickerOnInputClick(input) {
+        if (!input) return;
+        input.addEventListener('click', () => {
+            if (typeof input.showPicker !== 'function' || input.disabled) return;
+            try {
+                input.showPicker();
+            } catch (e) {
+                // Ignore browsers/contexts where showPicker is unavailable at runtime.
+            }
+        });
+    }
+
+    attachTimePickerOnInputClick(startTime);
+    attachTimePickerOnInputClick(endTime);
+
     function insertCurrentTabDomain() {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const activeTab = tabs && tabs[0];
