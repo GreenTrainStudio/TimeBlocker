@@ -13,7 +13,30 @@
             color: #333;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 8px;
+        }
+        .title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .settings-trigger {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 1px solid #d0d0d0;
+            background: #fff;
+            color: #444;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            flex: 0 0 auto;
+        }
+        .settings-trigger:hover {
+            background: #f4f7fb;
+            border-color: #aac8ea;
         }
         .section {
             background: #f5f5f5;
@@ -217,11 +240,40 @@
             position: relative;
             z-index: 1;
         }
+        .settings-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 16px;
+        }
+        .settings-modal.active {
+            display: flex;
+        }
+        .settings-modal-card {
+            width: 100%;
+            max-width: 320px;
+            background: #fff;
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+        .settings-modal-title {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            color: #222;
+        }
     </style>
 </head>
 <body>
     <h2>
-        <span>⏰ Time Blocker</span>
+        <span class="title-wrap">
+            <span>⏰ Time Blocker</span>
+        </span>
+        <button id="settingsBtn" class="settings-trigger" title="Настройки">⚙️</button>
     </h2>
     
     <div class="edit-mode-indicator" id="editModeIndicator">
@@ -243,7 +295,7 @@
         <div class="days-container" id="daysContainer"></div>
         <div class="toggle-row">
             <input type="checkbox" id="hardDeleteToggle" />
-            <label for="hardDeleteToggle" style="margin:0; font-weight:600;">Сложное удаление (удерживать 20с)</label>
+            <label for="hardDeleteToggle" id="hardDeleteLabel" style="margin:0; font-weight:600;">Сложное удаление</label>
         </div>
         
         <div class="button-group">
@@ -262,6 +314,18 @@
             <button id="holdDeleteBtn" class="danger hold-delete-btn" style="--progress:0%;">
                 <span class="hold-delete-text" id="holdDeleteText">Удерживайте 20с для удаления</span>
             </button>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="settings-modal">
+        <div class="settings-modal-card">
+            <h3 class="settings-modal-title">Настройки защиты</h3>
+            <label for="holdDurationInput">Сколько секунд удерживать для сложного удаления/редактирования:</label>
+            <input type="number" id="holdDurationInput" min="1" max="300" step="1" />
+            <div class="button-group">
+                <button id="saveSettingsBtn">💾 Сохранить</button>
+                <button id="closeSettingsBtn" class="secondary">Закрыть</button>
+            </div>
         </div>
     </div>
 

@@ -17,6 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const holdDeleteBtn = document.getElementById('holdDeleteBtn');
     const holdDeleteText = document.getElementById('holdDeleteText');
     const holdDeleteNote = document.getElementById('holdDeleteNote');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const holdDurationInput = document.getElementById('holdDurationInput');
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    const hardDeleteLabel = document.getElementById('hardDeleteLabel');
 
     let selectedDays = new Set([1, 2, 3, 4, 5]);
     let editingIndex = -1; // -1 means not editing
@@ -28,7 +34,45 @@ document.addEventListener('DOMContentLoaded', () => {
     let holdDeleteRaf = null;
     let holdDeleteStart = null;
     let pendingHoldAction = null; // { type: 'delete' | 'edit', index: number }
-    const HOLD_DELETE_MS = 20000;
+    const DEFAULT_HOLD_DELETE_SECONDS = 20;
+    let holdDeleteSeconds = DEFAULT_HOLD_DELETE_SECONDS;
+
+    function getHoldDeleteMs() {
+        return holdDeleteSeconds * 1000;
+    }
+
+    function getHoldBaseText(actionType) {
+        if (actionType === 'delete') {
+            return `Удерживайте ${holdDeleteSeconds}с для удаления`;
+        }
+        if (actionType === 'edit') {
+            return `Удерживайте ${holdDeleteSeconds}с для редактирования`;
+        }
+        return `Удерживайте ${holdDeleteSeconds}с`;
+    }
+
+    function refreshHoldLabels() {
+        hardDeleteLabel.textContent = `Сложное удаление (удерживать ${holdDeleteSeconds}с)`;
+        holdDeleteText.textContent = getHoldBaseText(pendingHoldAction?.type);
+    }
+
+    function openSettings() {
+        holdDurationInput.value = holdDeleteSeconds;
+        settingsModal.classList.add('active');
+    }
+
+    function closeSettings() {
+        settingsModal.classList.remove('active');
+    }
+
+    function loadSettings(callback) {
+        chrome.storage.local.get({ holdDeleteSeconds: DEFAULT_HOLD_DELETE_SECONDS }, (data) => {
+            const rawSeconds = Number(data.holdDeleteSeconds);
+            holdDeleteSeconds = Number.isFinite(rawSeconds) ? Math.max(1, Math.min(300, Math.round(rawSeconds))) : DEFAULT_HOLD_DELETE_SECONDS;
+            refreshHoldLabels();
+            if (typeof callback === 'function') callback();
+        });
+    }
 
     function getRuleKey(rule) {
         const days = [...rule.days].sort((a, b) => a - b).join(',');
@@ -138,28 +182,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         holdDeleteStart = null;
         holdDeleteBtn.style.setProperty('--progress', '0%');
-        if (pendingHoldAction?.type === 'delete') {
-            holdDeleteText.textContent = 'Удерживайте 20с для удаления';
-        } else if (pendingHoldAction?.type === 'edit') {
-            holdDeleteText.textContent = 'Удерживайте 20с для редактирования';
-        } else {
-            holdDeleteText.textContent = 'Удерживайте 20с';
-        }
+        holdDeleteText.textContent = getHoldBaseText(pendingHoldAction?.type);
         if (hidePanel) {
             holdDeletePanel.classList.remove('active');
             pendingHoldAction = null;
-            holdDeleteText.textContent = 'Удерживайте 20с';
+            holdDeleteText.textContent = getHoldBaseText();
         }
     }
 
     function updateHoldDeleteProgress() {
         if (!holdDeleteStart) return;
         const elapsed = Date.now() - holdDeleteStart;
-        const progress = Math.min(100, (elapsed / HOLD_DELETE_MS) * 100);
+        const holdDeleteMs = getHoldDeleteMs();
+        const progress = Math.min(100, (elapsed / holdDeleteMs) * 100);
         holdDeleteBtn.style.setProperty('--progress', `${progress}%`);
-        holdDeleteText.textContent = `Удерживайте... ${Math.max(0, Math.ceil((HOLD_DELETE_MS - elapsed) / 1000))}с`;
+        holdDeleteText.textContent = `Удерживайте... ${Math.max(0, Math.ceil((holdDeleteMs - elapsed) / 1000))}с`;
 
-        if (elapsed < HOLD_DELETE_MS) {
+        if (elapsed < holdDeleteMs) {
             holdDeleteRaf = requestAnimationFrame(updateHoldDeleteProgress);
         }
     }
@@ -201,12 +240,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (type === 'delete') {
             holdDeletePanel.querySelector('h3').textContent = 'Подтверждение удаления';
-            holdDeleteNote.textContent = `Правило для ${rule.site}. Удерживайте кнопку 20 секунд без отпускания, чтобы удалить правило.`;
-            holdDeleteText.textContent = 'Удерживайте 20с для удаления';
+            holdDeleteNote.textContent = `Правило для ${rule.site}. Удерживайте кнопку ${holdDeleteSeconds} секунд без отпускания, чтобы удалить правило.`;
+            holdDeleteText.textContent = getHoldBaseText('delete');
         } else {
             holdDeletePanel.querySelector('h3').textContent = 'Разблокировка редактирования';
-            holdDeleteNote.textContent = `Правило для ${rule.site} защищено сложным удалением. Удерживайте кнопку 20 секунд, чтобы открыть редактирование.`;
-            holdDeleteText.textContent = 'Удерживайте 20с для редактирования';
+            holdDeleteNote.textContent = `Правило для ${rule.site} защищено сложным удалением. Удерживайте кнопку ${holdDeleteSeconds} секунд, чтобы открыть редактирование.`;
+            holdDeleteText.textContent = getHoldBaseText('edit');
         }
 
         resetHoldDeleteState(false);
@@ -217,6 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resetHoldDeleteState(false);
         holdDeleteStart = Date.now();
         holdDeleteRaf = requestAnimationFrame(updateHoldDeleteProgress);
+        const holdDeleteMs = getHoldDeleteMs();
         holdDeleteTimer = setTimeout(() => {
             if (!pendingHoldAction) return;
             if (pendingHoldAction.type === 'delete') {
@@ -224,16 +264,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             confirmEdit(pendingHoldAction.index);
-        }, HOLD_DELETE_MS);
+        }, holdDeleteMs);
     }
 
     function cancelHoldDelete() {
         if (!pendingHoldAction) return;
-        if (pendingHoldAction.type === 'delete') {
-            holdDeleteText.textContent = 'Удерживайте 20с для удаления';
-        } else {
-            holdDeleteText.textContent = 'Удерживайте 20с для редактирования';
-        }
+        holdDeleteText.textContent = getHoldBaseText(pendingHoldAction.type);
         resetHoldDeleteState(false);
     }
 
@@ -445,6 +481,29 @@ document.addEventListener('DOMContentLoaded', () => {
     holdDeleteBtn.addEventListener('touchend', cancelHoldDelete);
     holdDeleteBtn.addEventListener('touchcancel', cancelHoldDelete);
 
+    settingsBtn.addEventListener('click', openSettings);
+    closeSettingsBtn.addEventListener('click', closeSettings);
+    settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+            closeSettings();
+        }
+    });
+    saveSettingsBtn.addEventListener('click', () => {
+        const parsed = Number(holdDurationInput.value);
+        if (!Number.isFinite(parsed) || parsed < 1 || parsed > 300) {
+            alert('Введите число от 1 до 300');
+            return;
+        }
+        holdDeleteSeconds = Math.round(parsed);
+        chrome.storage.local.set({ holdDeleteSeconds }, () => {
+            refreshHoldLabels();
+            if (pendingHoldAction) {
+                requestHoldAction(pendingHoldAction.type, pendingHoldAction.index);
+            }
+            closeSettings();
+        });
+    });
+
     chrome.storage.onChanged.addListener((changes, areaName) => {
         if (areaName !== 'local' || (!changes.rules && !changes.blockAttempts)) return;
         clearTimeout(storageChangeDebounce);
@@ -452,5 +511,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Initialize
-    loadRules();
+    loadSettings(loadRules);
 });
