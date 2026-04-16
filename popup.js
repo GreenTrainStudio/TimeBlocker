@@ -236,20 +236,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
     }
 
-    function attachTimePickerOnInputClick(input) {
+    function closeTimePickerAfterSelection(input) {
         if (!input) return;
-        input.addEventListener('click', () => {
-            if (typeof input.showPicker !== 'function' || input.disabled) return;
-            try {
-                input.showPicker();
-            } catch (e) {
-                // Ignore browsers/contexts where showPicker is unavailable at runtime.
+        input.addEventListener('change', () => {
+            if (input.disabled) return;
+            if (/^\d{2}:\d{2}$/.test(input.value)) {
+                input.blur();
             }
         });
     }
 
-    attachTimePickerOnInputClick(startTime);
-    attachTimePickerOnInputClick(endTime);
+    closeTimePickerAfterSelection(startTime);
+    closeTimePickerAfterSelection(endTime);
 
     function insertCurrentTabDomain() {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
