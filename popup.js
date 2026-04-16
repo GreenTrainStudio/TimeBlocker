@@ -9,14 +9,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateBtn = document.getElementById('updateBtn');
     const cancelEditBtn = document.getElementById('cancelEditBtn');
     const rulesListDiv = document.getElementById('rulesList');
-    const clearAllBtn = document.getElementById('clearAllBtn');
+    const ruleEditorSection = document.getElementById('ruleEditorSection');
     const editModeIndicator = document.getElementById('editModeIndicator');
     const editingSite = document.getElementById('editingSite');
+    const hardDeleteToggle = document.getElementById('hardDeleteToggle');
+    const holdDeletePanel = document.getElementById('holdDeletePanel');
+    const holdDeleteBtn = document.getElementById('holdDeleteBtn');
+    const holdDeleteText = document.getElementById('holdDeleteText');
+    const holdDeleteNote = document.getElementById('holdDeleteNote');
 
     let selectedDays = new Set([1, 2, 3, 4, 5]);
     let editingIndex = -1; // -1 means not editing
     let allRules = [];
+    let selectedRuleIndex = null;
+    let isEditLocked = false;
     let storageChangeDebounce = null;
+    let holdDeleteTimer = null;
+    let holdDeleteRaf = null;
+    let holdDeleteStart = null;
+    let pendingHoldAction = null; // { type: 'delete' | 'edit', index: number }
+    const HOLD_DELETE_MS = 20000;
 
     function getRuleKey(rule) {
         const days = [...rule.days].sort((a, b) => a - b).join(',');
@@ -45,9 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
         dayNames.forEach((name, index) => {
             const dayNum = index + 1;
             const btn = document.createElement('div');
-            btn.className = `day-btn ${selectedDays.has(dayNum) ? 'selected' : ''}`;
+            btn.className = `day-btn ${selectedDays.has(dayNum) ? 'selected' : ''} ${isEditLocked ? 'disabled' : ''}`;
             btn.textContent = name;
             btn.addEventListener('click', () => {
+                if (isEditLocked) return;
                 if (selectedDays.has(dayNum)) {
                     selectedDays.delete(dayNum);
                 } else {
@@ -60,9 +73,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     renderDayButtons();
 
+    function setEditLockState(locked) {
+        isEditLocked = locked;
+        siteInput.readOnly = locked;
+        startTime.disabled = locked;
+        endTime.disabled = locked;
+        hardDeleteToggle.disabled = locked;
+        updateBtn.disabled = locked;
+        ruleEditorSection.classList.toggle('editor-locked', locked);
+        renderDayButtons();
+    }
+
     // Switch to edit mode
-    function enterEditMode(index) {
+    function enterEditMode(index, options = {}) {
+        const { locked = false } = options;
         const rule = allRules[index];
+        resetHoldDeleteState(true);
         editingIndex = index;
         
         siteInput.value = rule.site;
@@ -71,14 +97,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         selectedDays.clear();
         rule.days.forEach(d => selectedDays.add(d));
-        renderDayButtons();
+        hardDeleteToggle.checked = Boolean(rule.hardDeleteEnabled);
+        setEditLockState(locked);
         
         // Update UI
         addBtn.style.display = 'none';
         updateBtn.style.display = 'block';
         cancelEditBtn.style.display = 'block';
         editModeIndicator.classList.add('active');
-        editingSite.textContent = rule.site;
+        editingSite.textContent = locked ? `${rule.site} (locked)` : rule.site;
     }
 
     // Exit edit mode
@@ -87,16 +114,134 @@ document.addEventListener('DOMContentLoaded', () => {
         siteInput.value = '';
         startTime.value = '09:00';
         endTime.value = '18:00';
+        hardDeleteToggle.checked = false;
+        setEditLockState(false);
         
         selectedDays.clear();
         [1, 2, 3, 4, 5].forEach(d => selectedDays.add(d));
-        renderDayButtons();
         
         // Update UI
         addBtn.style.display = 'block';
         updateBtn.style.display = 'none';
         cancelEditBtn.style.display = 'none';
         editModeIndicator.classList.remove('active');
+    }
+
+    function resetHoldDeleteState(hidePanel = false) {
+        if (holdDeleteTimer) {
+            clearTimeout(holdDeleteTimer);
+            holdDeleteTimer = null;
+        }
+        if (holdDeleteRaf) {
+            cancelAnimationFrame(holdDeleteRaf);
+            holdDeleteRaf = null;
+        }
+        holdDeleteStart = null;
+        holdDeleteBtn.style.setProperty('--progress', '0%');
+        if (pendingHoldAction?.type === 'delete') {
+            holdDeleteText.textContent = 'Удерживайте 20с для удаления';
+        } else if (pendingHoldAction?.type === 'edit') {
+            holdDeleteText.textContent = 'Удерживайте 20с для редактирования';
+        } else {
+            holdDeleteText.textContent = 'Удерживайте 20с';
+        }
+        if (hidePanel) {
+            holdDeletePanel.classList.remove('active');
+            pendingHoldAction = null;
+            holdDeleteText.textContent = 'Удерживайте 20с';
+        }
+    }
+
+    function updateHoldDeleteProgress() {
+        if (!holdDeleteStart) return;
+        const elapsed = Date.now() - holdDeleteStart;
+        const progress = Math.min(100, (elapsed / HOLD_DELETE_MS) * 100);
+        holdDeleteBtn.style.setProperty('--progress', `${progress}%`);
+        holdDeleteText.textContent = `Удерживайте... ${Math.max(0, Math.ceil((HOLD_DELETE_MS - elapsed) / 1000))}с`;
+
+        if (elapsed < HOLD_DELETE_MS) {
+            holdDeleteRaf = requestAnimationFrame(updateHoldDeleteProgress);
+        }
+    }
+
+    function confirmDelete(index) {
+        const removedRule = allRules[index];
+        allRules.splice(index, 1);
+        chrome.storage.local.get({ blockAttempts: {} }, (data) => {
+            const blockAttempts = data.blockAttempts || {};
+            delete blockAttempts[getRuleKey(removedRule)];
+
+            chrome.storage.local.set({ rules: allRules, blockAttempts }, () => {
+                if (editingIndex === index) {
+                    exitEditMode();
+                } else if (editingIndex > index) {
+                    editingIndex--;
+                }
+                resetHoldDeleteState(true);
+                loadRules();
+            });
+        });
+    }
+
+    function confirmEdit(index) {
+        resetHoldDeleteState(true);
+        if (editingIndex === index) {
+            setEditLockState(false);
+            const rule = allRules[index];
+            editingSite.textContent = rule.site;
+            return;
+        }
+        enterEditMode(index);
+    }
+
+    function requestHoldAction(type, index) {
+        const rule = allRules[index];
+        pendingHoldAction = { type, index };
+        holdDeletePanel.classList.add('active');
+
+        if (type === 'delete') {
+            holdDeletePanel.querySelector('h3').textContent = 'Подтверждение удаления';
+            holdDeleteNote.textContent = `Правило для ${rule.site}. Удерживайте кнопку 20 секунд без отпускания, чтобы удалить правило.`;
+            holdDeleteText.textContent = 'Удерживайте 20с для удаления';
+        } else {
+            holdDeletePanel.querySelector('h3').textContent = 'Разблокировка редактирования';
+            holdDeleteNote.textContent = `Правило для ${rule.site} защищено сложным удалением. Удерживайте кнопку 20 секунд, чтобы открыть редактирование.`;
+            holdDeleteText.textContent = 'Удерживайте 20с для редактирования';
+        }
+
+        resetHoldDeleteState(false);
+    }
+
+    function beginHoldDelete() {
+        if (!pendingHoldAction) return;
+        resetHoldDeleteState(false);
+        holdDeleteStart = Date.now();
+        holdDeleteRaf = requestAnimationFrame(updateHoldDeleteProgress);
+        holdDeleteTimer = setTimeout(() => {
+            if (!pendingHoldAction) return;
+            if (pendingHoldAction.type === 'delete') {
+                confirmDelete(pendingHoldAction.index);
+                return;
+            }
+            confirmEdit(pendingHoldAction.index);
+        }, HOLD_DELETE_MS);
+    }
+
+    function cancelHoldDelete() {
+        if (!pendingHoldAction) return;
+        if (pendingHoldAction.type === 'delete') {
+            holdDeleteText.textContent = 'Удерживайте 20с для удаления';
+        } else {
+            holdDeleteText.textContent = 'Удерживайте 20с для редактирования';
+        }
+        resetHoldDeleteState(false);
+    }
+
+    function setSelectedRule(index) {
+        selectedRuleIndex = index;
+        document.querySelectorAll('.list-item').forEach((item, itemIndex) => {
+            item.classList.toggle('selected', itemIndex === selectedRuleIndex);
+        });
     }
 
     // Load and display rules
@@ -106,16 +251,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const blockAttempts = data.blockAttempts || {};
             
             if (allRules.length === 0) {
+                selectedRuleIndex = null;
+                resetHoldDeleteState(true);
                 rulesListDiv.innerHTML = '<div style="color:#888; text-align:center; padding:10px;">No rules</div>';
                 return;
+            }
+            if (selectedRuleIndex !== null && (selectedRuleIndex < 0 || selectedRuleIndex >= allRules.length)) {
+                selectedRuleIndex = null;
             }
             
             let html = '';
             allRules.forEach((rule, index) => {
                 const daysStr = rule.days.map(d => dayNames[d-1]).join(', ');
                 const attemptsCount = getDailyCount(blockAttempts[getRuleKey(rule)]);
+                const ruleClassName = rule.hardDeleteEnabled ? 'list-item protected' : 'list-item';
                 html += `
-                    <div class="list-item">
+                    <div class="${ruleClassName}">
                         <div class="list-item-content" data-index="${index}">
                             <span>${rule.site}</span><span class="attempts-count">за день: ${attemptsCount}</span><br>
                             <small>${rule.start} - ${rule.end} | ${daysStr}</small>
@@ -128,12 +279,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             });
             rulesListDiv.innerHTML = html;
+            setSelectedRule(selectedRuleIndex);
             
             // Add event listeners for delete buttons
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const index = parseInt(e.target.dataset.index);
+                    setSelectedRule(index);
                     deleteRule(index);
                 });
             });
@@ -143,6 +296,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const index = parseInt(e.target.dataset.index);
+                    setSelectedRule(index);
+                    const targetRule = allRules[index];
+                    if (targetRule?.hardDeleteEnabled) {
+                        enterEditMode(index, { locked: true });
+                        requestHoldAction('edit', index);
+                        return;
+                    }
                     enterEditMode(index);
                 });
             });
@@ -151,6 +311,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.list-item-content').forEach(content => {
                 content.addEventListener('click', (e) => {
                     const index = parseInt(e.target.closest('.list-item-content').dataset.index);
+                    setSelectedRule(index);
+                    const targetRule = allRules[index];
+                    if (targetRule?.hardDeleteEnabled) {
+                        enterEditMode(index, { locked: true });
+                        requestHoldAction('edit', index);
+                        return;
+                    }
                     enterEditMode(index);
                 });
             });
@@ -158,31 +325,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function deleteRule(index) {
-        if (confirm('Delete this rule?')) {
-            const removedRule = allRules[index];
-            allRules.splice(index, 1);
-            chrome.storage.local.get({ blockAttempts: {} }, (data) => {
-                const blockAttempts = data.blockAttempts || {};
-                delete blockAttempts[getRuleKey(removedRule)];
-
-                chrome.storage.local.set({ rules: allRules, blockAttempts }, () => {
-                    if (editingIndex === index) {
-                        exitEditMode();
-                    } else if (editingIndex > index) {
-                        editingIndex--;
-                    }
-                    loadRules();
-                });
-            });
+        const targetRule = allRules[index];
+        if (targetRule?.hardDeleteEnabled) {
+            requestHoldAction('delete', index);
+            return;
         }
-    }
 
-    function clearAllRules() {
-        if (confirm('Delete all rules?')) {
-            chrome.storage.local.set({ rules: [], blockAttempts: {} }, () => {
-                exitEditMode();
-                loadRules();
-            });
+        resetHoldDeleteState(true);
+        if (confirm('Delete this rule?')) {
+            confirmDelete(index);
         }
     }
 
@@ -213,7 +364,8 @@ document.addEventListener('DOMContentLoaded', () => {
             site: site,
             start: start,
             end: end,
-            days: Array.from(selectedDays).sort((a, b) => a - b)
+            days: Array.from(selectedDays).sort((a, b) => a - b),
+            hardDeleteEnabled: hardDeleteToggle.checked
         };
     }
 
@@ -283,7 +435,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cancel editing
     cancelEditBtn.addEventListener('click', exitEditMode);
 
-    clearAllBtn.addEventListener('click', clearAllRules);
+    holdDeleteBtn.addEventListener('mousedown', beginHoldDelete);
+    holdDeleteBtn.addEventListener('mouseup', cancelHoldDelete);
+    holdDeleteBtn.addEventListener('mouseleave', cancelHoldDelete);
+    holdDeleteBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        beginHoldDelete();
+    }, { passive: false });
+    holdDeleteBtn.addEventListener('touchend', cancelHoldDelete);
+    holdDeleteBtn.addEventListener('touchcancel', cancelHoldDelete);
 
     chrome.storage.onChanged.addListener((changes, areaName) => {
         if (areaName !== 'local' || (!changes.rules && !changes.blockAttempts)) return;
