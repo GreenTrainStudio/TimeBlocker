@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let holdDeleteTimer = null;
     let holdDeleteRaf = null;
     let holdDeleteStart = null;
-    let pendingDeleteIndex = null;
+    let pendingHoldAction = null; // { type: 'delete' | 'edit', index: number }
     const HOLD_DELETE_MS = 20000;
 
     function getRuleKey(rule) {
@@ -122,10 +122,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         holdDeleteStart = null;
         holdDeleteBtn.style.setProperty('--progress', '0%');
-        holdDeleteText.textContent = 'Удерживайте 20с для удаления';
+        if (pendingHoldAction?.type === 'delete') {
+            holdDeleteText.textContent = 'Удерживайте 20с для удаления';
+        } else if (pendingHoldAction?.type === 'edit') {
+            holdDeleteText.textContent = 'Удерживайте 20с для редактирования';
+        } else {
+            holdDeleteText.textContent = 'Удерживайте 20с';
+        }
         if (hidePanel) {
             holdDeletePanel.classList.remove('active');
-            pendingDeleteIndex = null;
+            pendingHoldAction = null;
+            holdDeleteText.textContent = 'Удерживайте 20с';
         }
     }
 
@@ -160,20 +167,51 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function confirmEdit(index) {
+        resetHoldDeleteState(true);
+        enterEditMode(index);
+    }
+
+    function requestHoldAction(type, index) {
+        const rule = allRules[index];
+        pendingHoldAction = { type, index };
+        holdDeletePanel.classList.add('active');
+
+        if (type === 'delete') {
+            holdDeletePanel.querySelector('h3').textContent = 'Подтверждение удаления';
+            holdDeleteNote.textContent = `Правило для ${rule.site}. Удерживайте кнопку 20 секунд без отпускания, чтобы удалить правило.`;
+            holdDeleteText.textContent = 'Удерживайте 20с для удаления';
+        } else {
+            holdDeletePanel.querySelector('h3').textContent = 'Разблокировка редактирования';
+            holdDeleteNote.textContent = `Правило для ${rule.site} защищено сложным удалением. Удерживайте кнопку 20 секунд, чтобы открыть редактирование.`;
+            holdDeleteText.textContent = 'Удерживайте 20с для редактирования';
+        }
+
+        resetHoldDeleteState(false);
+    }
+
     function beginHoldDelete() {
-        if (pendingDeleteIndex === null) return;
+        if (!pendingHoldAction) return;
         resetHoldDeleteState(false);
         holdDeleteStart = Date.now();
         holdDeleteRaf = requestAnimationFrame(updateHoldDeleteProgress);
         holdDeleteTimer = setTimeout(() => {
-            if (pendingDeleteIndex !== null) {
-                confirmDelete(pendingDeleteIndex);
+            if (!pendingHoldAction) return;
+            if (pendingHoldAction.type === 'delete') {
+                confirmDelete(pendingHoldAction.index);
+                return;
             }
+            confirmEdit(pendingHoldAction.index);
         }, HOLD_DELETE_MS);
     }
 
     function cancelHoldDelete() {
-        if (pendingDeleteIndex === null) return;
+        if (!pendingHoldAction) return;
+        if (pendingHoldAction.type === 'delete') {
+            holdDeleteText.textContent = 'Удерживайте 20с для удаления';
+        } else {
+            holdDeleteText.textContent = 'Удерживайте 20с для редактирования';
+        }
         resetHoldDeleteState(false);
     }
 
@@ -184,6 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const blockAttempts = data.blockAttempts || {};
             
             if (allRules.length === 0) {
+                resetHoldDeleteState(true);
                 rulesListDiv.innerHTML = '<div style="color:#888; text-align:center; padding:10px;">No rules</div>';
                 return;
             }
@@ -221,6 +260,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const index = parseInt(e.target.dataset.index);
+                    const targetRule = allRules[index];
+                    if (targetRule?.hardDeleteEnabled) {
+                        requestHoldAction('edit', index);
+                        return;
+                    }
                     enterEditMode(index);
                 });
             });
@@ -229,6 +273,11 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.list-item-content').forEach(content => {
                 content.addEventListener('click', (e) => {
                     const index = parseInt(e.target.closest('.list-item-content').dataset.index);
+                    const targetRule = allRules[index];
+                    if (targetRule?.hardDeleteEnabled) {
+                        requestHoldAction('edit', index);
+                        return;
+                    }
                     enterEditMode(index);
                 });
             });
@@ -238,10 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function deleteRule(index) {
         const targetRule = allRules[index];
         if (targetRule?.hardDeleteEnabled) {
-            pendingDeleteIndex = index;
-            holdDeleteNote.textContent = `Правило для ${targetRule.site}. Удерживайте кнопку 20 секунд без отпускания.`;
-            holdDeletePanel.classList.add('active');
-            resetHoldDeleteState(false);
+            requestHoldAction('delete', index);
             return;
         }
 
@@ -254,6 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (confirm('Delete all rules?')) {
             chrome.storage.local.set({ rules: [], blockAttempts: {} }, () => {
                 exitEditMode();
+                resetHoldDeleteState(true);
                 loadRules();
             });
         }
