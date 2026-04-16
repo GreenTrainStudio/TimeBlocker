@@ -207,6 +207,11 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDayButtons();
     }
 
+    function syncCancelEditAvailability() {
+        const isEditing = editingIndex !== -1;
+        cancelEditBtn.disabled = isEditing && hardDeleteToggle.checked;
+    }
+
     function normalizeDomainFromUrl(rawUrl) {
         try {
             const parsed = new URL(rawUrl);
@@ -266,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
         rule.days.forEach(d => selectedDays.add(d));
         hardDeleteToggle.checked = Boolean(rule.hardDeleteEnabled);
         setEditLockState(locked);
+        syncCancelEditAvailability();
         
         // Update UI
         addBtn.style.display = 'none';
@@ -284,6 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         endTime.value = '18:00';
         hardDeleteToggle.checked = false;
         setEditLockState(false);
+        syncCancelEditAvailability();
         
         selectedDays.clear();
         [1, 2, 3, 4, 5].forEach(d => selectedDays.add(d));
@@ -603,6 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cancel editing
     cancelEditBtn.addEventListener('click', exitEditMode);
+    hardDeleteToggle.addEventListener('change', syncCancelEditAvailability);
     newRuleBtn.addEventListener('click', () => {
         resetHoldDeleteState(true);
         setSelectedRule(null);
