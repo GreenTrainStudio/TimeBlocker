@@ -13,7 +13,30 @@
             color: #333;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 8px;
+        }
+        .title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .settings-trigger {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 1px solid #d0d0d0;
+            background: #fff;
+            color: #444;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            flex: 0 0 auto;
+        }
+        .settings-trigger:hover {
+            background: #f4f7fb;
+            border-color: #aac8ea;
         }
         .section {
             background: #f5f5f5;
@@ -75,6 +98,24 @@
             cursor: pointer;
             font-weight: bold;
             flex: 1;
+            transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        }
+        button:hover {
+            filter: brightness(1.03);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.14);
+        }
+        button:active {
+            transform: translateY(1px) scale(0.985);
+            filter: brightness(0.96);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        }
+        button:disabled {
+            cursor: default;
+            opacity: 0.85;
+            transform: none;
+            filter: none;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
         }
         button.secondary {
             background: #6c757d;
@@ -217,11 +258,89 @@
             position: relative;
             z-index: 1;
         }
+        .settings-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 16px;
+        }
+        .settings-modal.active {
+            display: flex;
+        }
+        .settings-modal-card {
+            position: relative;
+            width: 100%;
+            max-width: 320px;
+            background: #fff;
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+        .settings-close-icon {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 50%;
+            background: transparent;
+            color: #666;
+            font-size: 20px;
+            line-height: 1;
+            padding: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .settings-close-icon:hover {
+            background: #f0f0f0;
+            color: #222;
+        }
+        .settings-modal-title {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            color: #222;
+        }
+        .settings-warning {
+            margin: 0 0 10px 0;
+            color: #8a6d3b;
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            border-radius: 6px;
+            font-size: 12px;
+            padding: 8px;
+        }
+        .hold-sync-btn {
+            position: relative;
+            min-height: 40px;
+            overflow: hidden;
+        }
+        .hold-sync-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(255,255,255,0.24) var(--progress, 0%), transparent 0);
+            transition: background 0.08s linear;
+            pointer-events: none;
+        }
+        .hold-sync-text {
+            position: relative;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
     <h2>
-        <span>⏰ Time Blocker</span>
+        <span class="title-wrap">
+            <span>⏰ Time Blocker</span>
+        </span>
+        <button id="settingsBtn" class="settings-trigger" title="Настройки">⚙️</button>
     </h2>
     
     <div class="edit-mode-indicator" id="editModeIndicator">
@@ -243,7 +362,7 @@
         <div class="days-container" id="daysContainer"></div>
         <div class="toggle-row">
             <input type="checkbox" id="hardDeleteToggle" />
-            <label for="hardDeleteToggle" style="margin:0; font-weight:600;">Сложное удаление (удерживать 20с)</label>
+            <label for="hardDeleteToggle" id="hardDeleteLabel" style="margin:0; font-weight:600;">Сложное удаление</label>
         </div>
         
         <div class="button-group">
@@ -254,6 +373,7 @@
     </div>
 
     <div class="section">
+        <button id="newRuleBtn" class="secondary" style="width:100%; margin-bottom:10px;">➕ New rule</button>
         <label>📋 Active Rules:</label>
         <div id="rulesList"></div>
         <div id="holdDeletePanel" class="hold-delete-panel">
@@ -262,6 +382,22 @@
             <button id="holdDeleteBtn" class="danger hold-delete-btn" style="--progress:0%;">
                 <span class="hold-delete-text" id="holdDeleteText">Удерживайте 20с для удаления</span>
             </button>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="settings-modal">
+        <div class="settings-modal-card">
+            <button id="settingsCloseIcon" class="settings-close-icon" title="Закрыть" aria-label="Закрыть">×</button>
+            <h3 class="settings-modal-title">Настройки защиты</h3>
+            <label for="holdDurationInput">Сколько секунд удерживать для сложного удаления/редактирования:</label>
+            <input type="number" id="holdDurationInput" min="1" max="300" step="1" />
+            <p class="settings-warning">Текущие таймеры не будут обновлены автоматически после сохранения.</p>
+            <div class="button-group">
+                <button id="saveSettingsBtn">💾 Сохранить</button>
+                <button id="syncTimersBtn" class="secondary hold-sync-btn" style="--progress:0%;">
+                    <span id="syncTimersText" class="hold-sync-text">Удерживайте для обновления текущих таймеров</span>
+                </button>
+            </div>
         </div>
     </div>
 
