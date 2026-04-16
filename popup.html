@@ -419,6 +419,14 @@
             font-size: 12px;
             padding: 8px;
         }
+        .settings-toggle-row {
+            margin-bottom: 12px;
+        }
+        .settings-toggle-label {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 600;
+        }
         .hold-sync-btn {
             position: relative;
             min-height: 40px;
@@ -468,7 +476,7 @@
         <div class="days-container" id="daysContainer"></div>
         <div class="toggle-row">
             <label class="toggle-switch" for="hardDeleteToggle">
-                <input type="checkbox" id="hardDeleteToggle" />
+                <input type="checkbox" id="hardDeleteToggle" checked />
                 <span class="toggle-slider"></span>
             </label>
             <label for="hardDeleteToggle" id="hardDeleteLabel" style="margin:0; font-weight:600;">Сложное удаление</label>
@@ -500,6 +508,13 @@
             <h3 class="settings-modal-title" data-i18n="settings.protectionTitle">Настройки защиты</h3>
             <label for="holdDurationInput" data-i18n="settings.holdLabel">Сколько секунд удерживать для сложного удаления/редактирования:</label>
             <input type="number" id="holdDurationInput" min="1" max="300" step="1" />
+            <div class="toggle-row settings-toggle-row">
+                <label class="toggle-switch" for="defaultHardDeleteEnabledInput">
+                    <input type="checkbox" id="defaultHardDeleteEnabledInput" />
+                    <span class="toggle-slider"></span>
+                </label>
+                <label for="defaultHardDeleteEnabledInput" class="settings-toggle-label" data-i18n="settings.defaultHardDelete">Включать сложное удаление по умолчанию</label>
+            </div>
             <p class="settings-warning" data-i18n="settings.warning">Текущие таймеры не будут обновлены автоматически после сохранения.</p>
             <div class="button-group">
                 <button id="saveSettingsBtn" data-i18n="btn.save">💾 Сохранить</button>
