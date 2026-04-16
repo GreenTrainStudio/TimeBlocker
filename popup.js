@@ -73,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Switch to edit mode
     function enterEditMode(index) {
         const rule = allRules[index];
+        resetHoldDeleteState(true);
         editingIndex = index;
         
         siteInput.value = rule.site;
@@ -307,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        resetHoldDeleteState(true);
         if (confirm('Delete this rule?')) {
             confirmDelete(index);
         }
