@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsModal = document.getElementById('settingsModal');
     const holdDurationInput = document.getElementById('holdDurationInput');
+    const defaultHardDeleteEnabledInput = document.getElementById('defaultHardDeleteEnabledInput');
     const saveSettingsBtn = document.getElementById('saveSettingsBtn');
     const settingsCloseIcon = document.getElementById('settingsCloseIcon');
     const hardDeleteLabel = document.getElementById('hardDeleteLabel');
@@ -42,8 +43,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let holdDeleteStart = null;
     let pendingHoldAction = null; // { type: 'delete' | 'edit', index: number }
     const DEFAULT_HOLD_DELETE_SECONDS = 20;
+    const DEFAULT_HARD_DELETE_ENABLED = true;
     let holdDeleteSeconds = DEFAULT_HOLD_DELETE_SECONDS;
     let activeHoldDeleteSeconds = DEFAULT_HOLD_DELETE_SECONDS;
+    let defaultHardDeleteEnabled = DEFAULT_HARD_DELETE_ENABLED;
     let syncTimersTimer = null;
     let syncTimersRaf = null;
     let syncTimersStart = null;
@@ -68,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function refreshHoldLabels() {
-        hardDeleteLabel.textContent = t('hardDelete.label', { seconds: activeHoldDeleteSeconds });
+        hardDeleteLabel.textContent = t('hardDelete.label');
         holdDeleteText.textContent = getHoldBaseText(pendingHoldAction?.type);
         syncTimersText.textContent = getSyncTimersBaseText();
         syncTimersBtn.style.setProperty('--progress', '0%');
@@ -76,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openSettings() {
         holdDurationInput.value = holdDeleteSeconds;
+        defaultHardDeleteEnabledInput.checked = defaultHardDeleteEnabled;
         settingsModal.classList.add('active');
     }
 
@@ -87,7 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadSettings(callback) {
         chrome.storage.local.get({
             holdDeleteSeconds: DEFAULT_HOLD_DELETE_SECONDS,
-            activeHoldDeleteSeconds: DEFAULT_HOLD_DELETE_SECONDS
+            activeHoldDeleteSeconds: DEFAULT_HOLD_DELETE_SECONDS,
+            defaultHardDeleteEnabled: DEFAULT_HARD_DELETE_ENABLED
         }, (data) => {
             const rawSeconds = Number(data.holdDeleteSeconds);
             holdDeleteSeconds = Number.isFinite(rawSeconds) ? Math.max(1, Math.min(300, Math.round(rawSeconds))) : DEFAULT_HOLD_DELETE_SECONDS;
@@ -95,6 +100,10 @@ document.addEventListener('DOMContentLoaded', () => {
             activeHoldDeleteSeconds = Number.isFinite(rawActiveSeconds)
                 ? Math.max(1, Math.min(300, Math.round(rawActiveSeconds)))
                 : holdDeleteSeconds;
+            defaultHardDeleteEnabled = Boolean(data.defaultHardDeleteEnabled);
+            if (editingIndex === -1) {
+                hardDeleteToggle.checked = defaultHardDeleteEnabled;
+            }
             refreshHoldLabels();
             if (typeof callback === 'function') callback();
         });
@@ -207,6 +216,11 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDayButtons();
     }
 
+    function syncCancelEditAvailability() {
+        const isEditing = editingIndex !== -1;
+        cancelEditBtn.disabled = isEditing && hardDeleteToggle.checked;
+    }
+
     function normalizeDomainFromUrl(rawUrl) {
         try {
             const parsed = new URL(rawUrl);
@@ -266,6 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         rule.days.forEach(d => selectedDays.add(d));
         hardDeleteToggle.checked = Boolean(rule.hardDeleteEnabled);
         setEditLockState(locked);
+        syncCancelEditAvailability();
         
         // Update UI
         addBtn.style.display = 'none';
@@ -282,8 +297,9 @@ document.addEventListener('DOMContentLoaded', () => {
         siteInput.value = '';
         startTime.value = '09:00';
         endTime.value = '18:00';
-        hardDeleteToggle.checked = false;
+        hardDeleteToggle.checked = defaultHardDeleteEnabled;
         setEditLockState(false);
+        syncCancelEditAvailability();
         
         selectedDays.clear();
         [1, 2, 3, 4, 5].forEach(d => selectedDays.add(d));
@@ -559,6 +575,8 @@ document.addEventListener('DOMContentLoaded', () => {
         allRules.push(newRule);
         chrome.storage.local.set({ rules: allRules }, () => {
             siteInput.value = '';
+            hardDeleteToggle.checked = defaultHardDeleteEnabled;
+            syncCancelEditAvailability();
             loadRules();
         });
     });
@@ -603,6 +621,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cancel editing
     cancelEditBtn.addEventListener('click', exitEditMode);
+    hardDeleteToggle.addEventListener('change', syncCancelEditAvailability);
     newRuleBtn.addEventListener('click', () => {
         resetHoldDeleteState(true);
         setSelectedRule(null);
@@ -633,7 +652,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         holdDeleteSeconds = Math.round(parsed);
-        chrome.storage.local.set({ holdDeleteSeconds }, () => {
+        defaultHardDeleteEnabled = defaultHardDeleteEnabledInput.checked;
+        chrome.storage.local.set({ holdDeleteSeconds, defaultHardDeleteEnabled }, () => {
+            if (editingIndex === -1) {
+                hardDeleteToggle.checked = defaultHardDeleteEnabled;
+            }
+            syncCancelEditAvailability();
             refreshHoldLabels();
             if (saveSettingsResetTimer) {
                 clearTimeout(saveSettingsResetTimer);
