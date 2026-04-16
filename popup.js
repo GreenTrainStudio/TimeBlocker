@@ -231,8 +231,9 @@ document.addEventListener('DOMContentLoaded', () => {
             allRules.forEach((rule, index) => {
                 const daysStr = rule.days.map(d => dayNames[d-1]).join(', ');
                 const attemptsCount = getDailyCount(blockAttempts[getRuleKey(rule)]);
+                const ruleClassName = rule.hardDeleteEnabled ? 'list-item protected' : 'list-item';
                 html += `
-                    <div class="list-item">
+                    <div class="${ruleClassName}">
                         <div class="list-item-content" data-index="${index}">
                             <span>${rule.site}</span><span class="attempts-count">за день: ${attemptsCount}</span><br>
                             <small>${rule.start} - ${rule.end} | ${daysStr}</small>
