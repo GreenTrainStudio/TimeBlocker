@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedDays = new Set([1, 2, 3, 4, 5]);
     let editingIndex = -1; // -1 means not editing
     let allRules = [];
+    let selectedRuleIndex = null;
     let storageChangeDebounce = null;
     let holdDeleteTimer = null;
     let holdDeleteRaf = null;
@@ -214,6 +215,13 @@ document.addEventListener('DOMContentLoaded', () => {
         resetHoldDeleteState(false);
     }
 
+    function setSelectedRule(index) {
+        selectedRuleIndex = index;
+        document.querySelectorAll('.list-item').forEach((item, itemIndex) => {
+            item.classList.toggle('selected', itemIndex === selectedRuleIndex);
+        });
+    }
+
     // Load and display rules
     function loadRules() {
         chrome.storage.local.get({ rules: [], blockAttempts: {} }, (data) => {
@@ -221,9 +229,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const blockAttempts = data.blockAttempts || {};
             
             if (allRules.length === 0) {
+                selectedRuleIndex = null;
                 resetHoldDeleteState(true);
                 rulesListDiv.innerHTML = '<div style="color:#888; text-align:center; padding:10px;">No rules</div>';
                 return;
+            }
+            if (selectedRuleIndex !== null && (selectedRuleIndex < 0 || selectedRuleIndex >= allRules.length)) {
+                selectedRuleIndex = null;
             }
             
             let html = '';
@@ -245,12 +257,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             });
             rulesListDiv.innerHTML = html;
+            setSelectedRule(selectedRuleIndex);
             
             // Add event listeners for delete buttons
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const index = parseInt(e.target.dataset.index);
+                    setSelectedRule(index);
                     deleteRule(index);
                 });
             });
@@ -260,6 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const index = parseInt(e.target.dataset.index);
+                    setSelectedRule(index);
                     const targetRule = allRules[index];
                     if (targetRule?.hardDeleteEnabled) {
                         requestHoldAction('edit', index);
@@ -273,6 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.list-item-content').forEach(content => {
                 content.addEventListener('click', (e) => {
                     const index = parseInt(e.target.closest('.list-item-content').dataset.index);
+                    setSelectedRule(index);
                     const targetRule = allRules[index];
                     if (targetRule?.hardDeleteEnabled) {
                         requestHoldAction('edit', index);
