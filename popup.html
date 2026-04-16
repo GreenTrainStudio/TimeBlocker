@@ -58,6 +58,43 @@
             border: 1px solid #ccc;
             border-radius: 4px;
         }
+        .domain-input-wrap {
+            position: relative;
+            margin-bottom: 10px;
+        }
+        .domain-input-wrap input[type="text"] {
+            margin-bottom: 0;
+            padding-right: 40px;
+        }
+        .domain-from-tab-btn {
+            position: absolute;
+            top: 50%;
+            right: 6px;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: 1px solid #cdd8e5;
+            background: #fff;
+            color: #4a5a6a;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            font-size: 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+        }
+        .domain-from-tab-btn:hover {
+            background: #eef6ff;
+            border-color: #aac8ea;
+        }
+        .domain-from-tab-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+            background: #f3f3f3;
+        }
         .days-container {
             display: flex;
             flex-wrap: wrap;
@@ -349,7 +386,10 @@
 
     <div class="section" id="ruleEditorSection">
         <label>🌐 Domain (e.g. youtube.com):</label>
-        <input type="text" id="siteInput" placeholder="youtube.com" />
+        <div class="domain-input-wrap">
+            <input type="text" id="siteInput" placeholder="youtube.com" />
+            <button type="button" id="insertCurrentDomainBtn" class="domain-from-tab-btn" title="Вставить домен текущей вкладки" aria-label="Вставить домен текущей вкладки">↗</button>
+        </div>
         <div class="note">Without www and https://</div>
         
         <label>⏳ From:</label>
