@@ -1,8 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "Time Blocker",
+  "name": "Time Saver",
   "version": "1.0",
-  "description": "Блокирует выбранные сайты в указанный промежуток времени и дни недели",
+  "description": "Blocks selected websites during specified time ranges and days of the week",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "permissions": [
     "storage",
     "webNavigation",
@@ -16,6 +22,10 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Настройки блокировки"
+    "default_title": "Blocking settings",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
   }
 }

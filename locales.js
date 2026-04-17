@@ -1,6 +1,6 @@
 window.TIMEBLOCKER_LOCALES = {
   ru: {
-    'app.title': '⏰ Time Blocker',
+    'app.title': '⏰ Time Saver',
     'settings.title': 'Настройки',
     'edit.indicator': 'Редактирование правила для: {site}',
     'domain.label': '🌐 Домен (например, youtube.com):',
@@ -63,7 +63,7 @@ window.TIMEBLOCKER_LOCALES = {
     'blocked.finished': 'Блокировка должна закончиться. Попробуйте обновить страницу.'
   },
   en: {
-    'app.title': '⏰ Time Blocker',
+    'app.title': '⏰ Time Saver',
     'settings.title': 'Settings',
     'edit.indicator': 'Editing rule for: {site}',
     'domain.label': '🌐 Domain (e.g. youtube.com):',
