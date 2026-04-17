@@ -12,10 +12,8 @@
   "permissions": [
     "storage",
     "webNavigation",
-    "tabs"
-  ],
-  "host_permissions": [
-    "<all_urls>"
+    "tabs",
+    "activeTab"
   ],
   "background": {
     "service_worker": "background.js"
@@ -27,5 +25,9 @@
       "16": "icons/icon16.png",
       "32": "icons/icon32.png"
     }
-  }
+  },
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ]
 }
