@@ -236,6 +236,39 @@ document.addEventListener('DOMContentLoaded', () => {
         return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
     }
 
+    function getOriginsForDomain(domain) {
+        if (!domain) return [];
+        const normalized = domain.replace(/^\*\./, '').replace(/^www\./i, '').trim();
+        if (!normalized) return [];
+        return [
+            `https://${normalized}/*`,
+            `https://*.${normalized}/*`,
+            `http://${normalized}/*`,
+            `http://*.${normalized}/*`
+        ];
+    }
+
+    function ensureHostPermissionsForRules(rules, callback) {
+        if (!chrome.permissions || typeof chrome.permissions.request !== 'function') {
+            callback(true);
+            return;
+        }
+
+        const origins = [...new Set(rules.flatMap((rule) => getOriginsForDomain(rule.site)))];
+        if (origins.length === 0) {
+            callback(true);
+            return;
+        }
+
+        chrome.permissions.request({ origins }, (granted) => {
+            if (chrome.runtime.lastError) {
+                callback(false);
+                return;
+            }
+            callback(Boolean(granted));
+        });
+    }
+
     function attachTimePickerOnInputClick(input) {
         if (!input) return;
         input.addEventListener('click', () => {
@@ -572,12 +605,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        allRules.push(newRule);
-        chrome.storage.local.set({ rules: allRules }, () => {
-            siteInput.value = '';
-            hardDeleteToggle.checked = defaultHardDeleteEnabled;
-            syncCancelEditAvailability();
-            loadRules();
+        const nextRules = [...allRules, newRule];
+        ensureHostPermissionsForRules(nextRules, (granted) => {
+            if (!granted) {
+                alert(t('alert.permissionDenied'));
+                return;
+            }
+
+            allRules = nextRules;
+            chrome.storage.local.set({ rules: allRules }, () => {
+                siteInput.value = '';
+                hardDeleteToggle.checked = defaultHardDeleteEnabled;
+                syncCancelEditAvailability();
+                loadRules();
+            });
         });
     });
 
@@ -604,17 +645,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const previousKey = getRuleKey(previousRule);
         const updatedKey = getRuleKey(updatedRule);
 
-        allRules[editingIndex] = updatedRule;
-        chrome.storage.local.get({ blockAttempts: {} }, (data) => {
-            const blockAttempts = data.blockAttempts || {};
-            if (previousKey !== updatedKey) {
-                blockAttempts[updatedKey] = blockAttempts[previousKey] || 0;
-                delete blockAttempts[previousKey];
+        const nextRules = [...allRules];
+        nextRules[editingIndex] = updatedRule;
+
+        ensureHostPermissionsForRules(nextRules, (granted) => {
+            if (!granted) {
+                alert(t('alert.permissionDenied'));
+                return;
             }
 
-            chrome.storage.local.set({ rules: allRules, blockAttempts }, () => {
-                exitEditMode();
-                loadRules();
+            allRules = nextRules;
+            chrome.storage.local.get({ blockAttempts: {} }, (data) => {
+                const blockAttempts = data.blockAttempts || {};
+                if (previousKey !== updatedKey) {
+                    blockAttempts[updatedKey] = blockAttempts[previousKey] || 0;
+                    delete blockAttempts[previousKey];
+                }
+
+                chrome.storage.local.set({ rules: allRules, blockAttempts }, () => {
+                    exitEditMode();
+                    loadRules();
+                });
             });
         });
     });
